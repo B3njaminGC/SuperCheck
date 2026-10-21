@@ -6,7 +6,9 @@
 ///   --dart-define=SUPABASE_ANON_KEY=eyJ...
 /// ```
 ///
-/// La anon key es pública por diseño (la seguridad la dan las políticas RLS),
+/// `SUPABASE_ANON_KEY` es la clave pública del proyecto (en el panel de Supabase puede
+/// aparecer como "publishable key" o como "anon key"; sirven las dos).
+/// Es pública por diseño (la seguridad la dan las políticas RLS),
 /// pero igual conviene no commitearla: usá un archivo `--dart-define-from-file`.
 abstract final class Env {
   static const supabaseUrl = String.fromEnvironment('SUPABASE_URL');

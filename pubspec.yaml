@@ -15,7 +15,7 @@ dependencies:
   flutter_riverpod: ^2.6.1
 
   # Backend (auth + base de datos + realtime)
-  supabase_flutter: ^2.8.0
+  supabase_flutter: ^2.15.4 # desde 2.15 existe `publishableKey` (anonKey quedó obsoleto)
 
   # Red / Open Food Facts
   http: ^1.2.2
