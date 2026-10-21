@@ -1,0 +1,8 @@
+include: package:flutter_lints/flutter.yaml
+
+# Se mantiene el set recomendado de flutter_lints, que ya incluye las reglas "const".
+# Ojo: `flutter analyze` también falla por avisos de nivel "info". Si el CI se pone
+# rojo solo por estilo, se puede usar `flutter analyze --no-fatal-infos`.
+linter:
+  rules:
+    avoid_print: true

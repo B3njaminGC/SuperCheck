@@ -1,0 +1,17 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+pubspec.lock
+coverage/
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+
+# Secretos locales (usá --dart-define-from-file con uno de estos)
+env.json
+*.env

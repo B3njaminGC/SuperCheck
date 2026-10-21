@@ -1,0 +1,40 @@
+name: supercheck
+description: SuperCheck - lista de supermercado inteligente, compartida y con verificador de códigos de barras.
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+  flutter: ">=3.24.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Estado
+  flutter_riverpod: ^2.6.1
+
+  # Backend (auth + base de datos + realtime)
+  supabase_flutter: ^2.8.0
+
+  # Red / Open Food Facts
+  http: ^1.2.2
+
+  # Escáner de códigos de barras (se usa en el paso 2)
+  mobile_scanner: ^6.0.2
+
+  # Cache local liviano (se usa para el cache de búsquedas / modo offline)
+  hive_flutter: ^1.1.0
+
+  # Utilidades
+  equatable: ^2.0.5
+  intl: ^0.19.0
+  cached_network_image: ^3.4.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
