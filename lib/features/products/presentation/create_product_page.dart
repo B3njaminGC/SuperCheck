@@ -103,6 +103,17 @@ class _CreateProductPageState extends ConsumerState<CreateProductPage> {
 
     return Scaffold(
       appBar: AppBar(title: Text(editing ? 'Editar producto' : 'Crear producto')),
+      // El botón queda siempre a la vista (también con el teclado abierto).
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          child: FilledButton.icon(
+            onPressed: _saving ? null : _save,
+            icon: const Icon(Icons.check),
+            label: Text(editing ? 'Guardar cambios' : 'Guardar producto'),
+          ),
+        ),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -187,12 +198,6 @@ class _CreateProductPageState extends ConsumerState<CreateProductPage> {
                 onPressed: _scan,
               ),
             ),
-          ),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: _saving ? null : _save,
-            icon: const Icon(Icons.check),
-            label: Text(editing ? 'Guardar cambios' : 'Guardar producto'),
           ),
         ],
       ),
