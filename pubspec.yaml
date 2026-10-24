@@ -20,11 +20,12 @@ dependencies:
   # Red / Open Food Facts
   http: ^1.2.2
 
-  # Escáner de códigos de barras (se usa en el paso 2)
+  # Escáner de códigos de barras
   mobile_scanner: ^6.0.2
 
-  # Cache local liviano (se usa para el cache de búsquedas / modo offline)
-  hive_flutter: ^1.1.0
+  # Almacenamiento en el teléfono: guarda las listas del modo "sin cuenta" y
+  # recuerda qué modo se estaba usando
+  shared_preferences: ^2.3.0
 
   # Utilidades
   equatable: ^2.0.5

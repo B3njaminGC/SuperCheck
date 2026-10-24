@@ -1,20 +1,34 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/mode/app_mode.dart';
 import '../../../core/network/supabase_provider.dart';
 import '../../../core/utils/barcode_utils.dart';
 import '../../products/domain/product.dart';
+import '../data/local_shopping_list_repository.dart';
 import '../data/shopping_list_repository.dart';
+import '../data/supabase_shopping_list_repository.dart';
 import '../domain/shopping_item.dart';
 
+/// Dónde se guardan las listas: en el teléfono (sin cuenta) o en Supabase (con cuenta),
+/// según el modo elegido. El resto de la app no distingue entre uno y otro.
 final shoppingListRepositoryProvider = Provider<ShoppingListRepository>((ref) {
-  return ShoppingListRepository(ref.watch(supabaseClientProvider));
+  switch (ref.watch(appModeProvider)) {
+    case AppMode.local:
+      final repository =
+          LocalShoppingListRepository(ref.watch(sharedPreferencesProvider));
+      ref.onDispose(repository.dispose);
+      return repository;
+    case AppMode.cloud:
+      return SupabaseShoppingListRepository(ref.watch(supabaseClientProvider));
+  }
 });
 
 /// Estado de una lista concreta (el argumento es el `listId`).
 ///
-/// El estado es un stream de Supabase Realtime: lo que agregue o tache otro miembro
-/// llega solo. Las acciones locales se aplican de forma optimista (la UI responde al
-/// instante) y se corrigen con el siguiente evento del stream o si la llamada falla.
+/// El estado es un stream del repositorio (en la nube, Supabase Realtime: lo que
+/// agregue o tache otro miembro llega solo). Las acciones se aplican de forma
+/// optimista (la UI responde al instante) y se corrigen con el siguiente evento del
+/// stream o si el guardado falla.
 final shoppingListControllerProvider = StreamNotifierProvider.autoDispose
     .family<ShoppingListController, List<ShoppingItem>, String>(
   ShoppingListController.new,

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/app_exception.dart';
+import '../../../core/mode/app_mode.dart';
 import '../../../core/utils/date_format.dart';
-import '../../../shared/widgets/confirm_dialog.dart';
 import '../../../shared/widgets/product_thumb.dart';
 import '../../../shared/widgets/snackbars.dart';
 import '../../../shared/widgets/state_views.dart';
@@ -89,6 +89,8 @@ class ListDetailPage extends ConsumerWidget {
 
   List<Widget> _actions(BuildContext context, WidgetRef ref, ShoppingList list) {
     final isOwner = list.ownerId == ref.read(currentUserIdProvider);
+    // Invitar y ver miembros solo tiene sentido con cuenta (listas compartidas).
+    final isLocal = ref.read(appModeProvider) == AppMode.local;
 
     if (list.isCompleted) {
       return [
@@ -108,7 +110,8 @@ class ListDetailPage extends ConsumerWidget {
           itemBuilder: (_) => [
             const PopupMenuItem(value: 'reuse', child: Text('Reutilizar esta lista')),
             const PopupMenuItem(value: 'reopen', child: Text('Reabrir lista')),
-            const PopupMenuItem(value: 'members', child: Text('Miembros')),
+            if (!isLocal)
+              const PopupMenuItem(value: 'members', child: Text('Miembros')),
             if (isOwner)
               const PopupMenuItem(value: 'delete', child: Text('Borrar lista')),
           ],
@@ -144,8 +147,10 @@ class ListDetailPage extends ConsumerWidget {
           }
         },
         itemBuilder: (_) => [
-          const PopupMenuItem(value: 'invite', child: Text('Invitar con código')),
-          const PopupMenuItem(value: 'members', child: Text('Miembros')),
+          if (!isLocal)
+            const PopupMenuItem(value: 'invite', child: Text('Invitar con código')),
+          if (!isLocal)
+            const PopupMenuItem(value: 'members', child: Text('Miembros')),
           if (isOwner)
             const PopupMenuItem(value: 'rename', child: Text('Renombrar lista')),
           const PopupMenuItem(value: 'finish', child: Text('Finalizar lista')),
@@ -181,27 +186,9 @@ class ListDetailPage extends ConsumerWidget {
     WidgetRef ref,
     ShoppingList list,
   ) async {
-    final ok = await showConfirmDialog(
-      context,
-      title: 'Borrar lista',
-      message: '"${list.name}" se borra para todos sus miembros, junto con '
-          'sus productos. Esto no se puede deshacer.',
-      confirmLabel: 'Borrar',
-      destructive: true,
-    );
-    if (!ok || !context.mounted) return;
-
-    final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
-    try {
-      await ref.read(listActionsProvider).delete(list.id);
-      navigator.popUntil((route) => route.isFirst);
-      messenger.showSnackBar(
-        SnackBar(content: Text('Lista "${list.name}" borrada')),
-      );
-    } on AppException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
-    }
+    final deleted = await confirmAndDeleteList(context, ref, list);
+    if (deleted) navigator.popUntil((route) => route.isFirst);
   }
 
   Future<void> _finish(BuildContext context, WidgetRef ref) async {

@@ -4,11 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/utils/date_format.dart';
 import '../../../shared/widgets/state_views.dart';
+import '../../auth/presentation/auth_providers.dart';
 import '../domain/shopping_list.dart';
 import 'list_flows.dart';
 import 'lists_providers.dart';
 
-/// Pestaña "Historial": listas finalizadas, listas para reutilizar con un toque.
+/// Pestaña "Historial": listas finalizadas, listas para reutilizar con un toque o
+/// borrar cuando ya no sirven.
 class HistoryPage extends ConsumerWidget {
   const HistoryPage({super.key, required this.onOpen});
 
@@ -54,6 +56,7 @@ class _HistoryCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final isOwner = list.ownerId == ref.watch(currentUserIdProvider);
     final date = list.completedAt == null
         ? null
         : 'Finalizada el ${formatShortDate(list.completedAt!)}';
@@ -83,16 +86,30 @@ class _HistoryCard extends ConsumerWidget {
                 ),
               ],
               const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerRight,
-                child: FilledButton.tonalIcon(
-                  onPressed: () async {
-                    final newId = await promptAndReuse(context, ref, list);
-                    if (newId != null) onOpen(newId);
-                  },
-                  icon: const Icon(Icons.replay),
-                  label: const Text('Reutilizar'),
-                ),
+              Row(
+                children: [
+                  TextButton.icon(
+                    onPressed: () => isOwner
+                        ? confirmAndDeleteList(context, ref, list)
+                        : confirmAndLeaveList(context, ref, list),
+                    style: TextButton.styleFrom(
+                      foregroundColor: theme.colorScheme.error,
+                    ),
+                    icon: Icon(
+                      isOwner ? Icons.delete_outline : Icons.logout,
+                    ),
+                    label: Text(isOwner ? 'Borrar' : 'Salir'),
+                  ),
+                  const Spacer(),
+                  FilledButton.tonalIcon(
+                    onPressed: () async {
+                      final newId = await promptAndReuse(context, ref, list);
+                      if (newId != null) onOpen(newId);
+                    },
+                    icon: const Icon(Icons.replay),
+                    label: const Text('Reutilizar'),
+                  ),
+                ],
               ),
             ],
           ),

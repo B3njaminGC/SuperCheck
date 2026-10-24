@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/errors/app_exception.dart';
+import '../../../core/mode/app_mode.dart';
 import '../../../shared/widgets/snackbars.dart';
 import 'auth_providers.dart';
 
@@ -176,6 +177,22 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             ? 'Ya tengo cuenta · Iniciar sesión'
                             : 'No tengo cuenta · Registrarme',
                       ),
+                    ),
+                    const Divider(height: 40),
+                    OutlinedButton.icon(
+                      onPressed: _loading
+                          ? null
+                          : () => ref
+                              .read(appModeProvider.notifier)
+                              .set(AppMode.local),
+                      icon: const Icon(Icons.phone_android),
+                      label: const Text('Seguir sin cuenta'),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Tus listas se guardan solo en este teléfono.',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodySmall,
                     ),
                   ],
                 ),

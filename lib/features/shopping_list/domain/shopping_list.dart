@@ -40,6 +40,37 @@ class ShoppingList extends Equatable {
 
   bool get isCompleted => status == ListStatus.completed;
 
+  /// Copia con cambios. [clearCompletedAt] borra la fecha de finalización (al reabrir).
+  ShoppingList copyWith({
+    String? name,
+    ListStatus? status,
+    DateTime? completedAt,
+    bool clearCompletedAt = false,
+    int? itemCount,
+  }) {
+    return ShoppingList(
+      id: id,
+      name: name ?? this.name,
+      ownerId: ownerId,
+      inviteCode: inviteCode,
+      createdAt: createdAt,
+      status: status ?? this.status,
+      completedAt: clearCompletedAt ? null : (completedAt ?? this.completedAt),
+      itemCount: itemCount ?? this.itemCount,
+    );
+  }
+
+  /// Mismo formato que la tabla `lists` (lo usa el almacenamiento del modo local).
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'owner_id': ownerId,
+        'invite_code': inviteCode,
+        'created_at': createdAt.toUtc().toIso8601String(),
+        'status': status.name,
+        'completed_at': completedAt?.toUtc().toIso8601String(),
+      };
+
   factory ShoppingList.fromJson(Map<String, dynamic> json) {
     return ShoppingList(
       id: json['id'] as String,

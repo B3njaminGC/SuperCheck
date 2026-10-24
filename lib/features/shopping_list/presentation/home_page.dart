@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/app_exception.dart';
+import '../../../core/mode/app_mode.dart';
 import '../../../shared/widgets/snackbars.dart';
 import '../../../shared/widgets/text_prompt_dialog.dart';
 import '../../auth/presentation/auth_providers.dart';
@@ -63,15 +64,32 @@ class _HomePageState extends ConsumerState<HomePage> {
     }
   }
 
+  /// Cierra la sesión y vuelve a las listas del teléfono.
+  Future<void> _logout() async {
+    // Se toman antes del await: al cerrar sesión esta pantalla se reemplaza.
+    final auth = ref.read(authRepositoryProvider);
+    final mode = ref.read(appModeProvider.notifier);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await auth.signOut();
+      await mode.set(AppMode.local);
+    } on AppException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final email = ref.watch(authRepositoryProvider).currentUser?.email ?? '';
+    final isLocal = ref.watch(appModeProvider) == AppMode.local;
+    final cloudAvailable = ref.watch(cloudAvailableProvider);
+    final email = ref.watch(currentUserEmailProvider) ?? '';
+    final modeController = ref.read(appModeProvider.notifier);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(_index == 0 ? 'Mis listas' : 'Historial'),
         actions: [
-          if (_index == 0)
+          if (_index == 0 && !isLocal)
             IconButton(
               icon: const Icon(Icons.group_add_outlined),
               tooltip: 'Unirme con código',
@@ -79,15 +97,39 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.account_circle_outlined),
+            tooltip: 'Cuenta',
             onSelected: (value) {
-              if (value == 'logout') ref.read(authRepositoryProvider).signOut();
+              switch (value) {
+                case 'cloud':
+                  modeController.set(AppMode.cloud);
+                case 'local':
+                  modeController.set(AppMode.local);
+                case 'logout':
+                  _logout();
+              }
             },
             itemBuilder: (_) => [
-              PopupMenuItem<String>(enabled: false, child: Text(email)),
-              const PopupMenuItem<String>(
-                value: 'logout',
-                child: Text('Cerrar sesión'),
+              PopupMenuItem<String>(
+                enabled: false,
+                child: Text(
+                  isLocal ? 'Listas guardadas en este teléfono' : email,
+                ),
               ),
+              if (isLocal && cloudAvailable)
+                const PopupMenuItem<String>(
+                  value: 'cloud',
+                  child: Text('Compartir con mi familia (cuenta)'),
+                ),
+              if (!isLocal)
+                const PopupMenuItem<String>(
+                  value: 'local',
+                  child: Text('Usar sin cuenta'),
+                ),
+              if (!isLocal)
+                const PopupMenuItem<String>(
+                  value: 'logout',
+                  child: Text('Cerrar sesión'),
+                ),
             ],
           ),
         ],

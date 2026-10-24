@@ -152,6 +152,27 @@ class ShoppingItem extends Equatable {
     );
   }
 
+  /// Mismo formato que la tabla `list_items` (lo usa el almacenamiento del modo local).
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'list_id': listId,
+        'name': name,
+        'created_at': createdAt.toUtc().toIso8601String(),
+        'barcode': barcode,
+        'brand': brand,
+        'quantity_label': quantityLabel,
+        'net_quantity': netQuantity?.value,
+        'net_unit': netQuantity?.unit.symbol,
+        'image_url': imageUrl,
+        'desired_qty': desiredQty,
+        'picked_qty': pickedQty,
+        'notes': notes,
+        'is_checked': isChecked,
+        'checked_by': checkedBy,
+        'checked_at': checkedAt?.toUtc().toIso8601String(),
+        'added_by': addedBy,
+      };
+
   factory ShoppingItem.fromJson(Map<String, dynamic> json) {
     final netValue = json['net_quantity'];
     final netUnit = QuantityUnit.fromSymbol(json['net_unit'] as String?);

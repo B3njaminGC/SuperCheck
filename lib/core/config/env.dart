@@ -1,4 +1,6 @@
-/// Configuración de entorno, inyectada en tiempo de compilación:
+/// Configuración de entorno, inyectada en tiempo de compilación. Es opcional: sin
+/// estos valores la app funciona igual, guardando las listas en el teléfono (modo
+/// "sin cuenta"); con ellos se habilita crear una cuenta y compartir listas.
 ///
 /// ```
 /// flutter run \
@@ -14,12 +16,7 @@ abstract final class Env {
   static const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
   static const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
 
-  static void assertConfigured() {
-    if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
-      throw StateError(
-        'Faltan SUPABASE_URL y/o SUPABASE_ANON_KEY. '
-        'Pasalos con --dart-define o --dart-define-from-file.',
-      );
-    }
-  }
+  /// `true` si se pasaron la URL y la clave de Supabase al compilar.
+  static bool get isSupabaseConfigured =>
+      supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
 }
