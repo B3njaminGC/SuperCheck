@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
@@ -28,14 +30,23 @@ class ProductThumb extends StatelessWidget {
             ? _placeholder(context)
             : ColoredBox(
                 color: Colors.white,
-                child: CachedNetworkImage(
-                  imageUrl: url,
-                  fit: fit,
-                  width: size,
-                  height: size,
-                  placeholder: (_, __) => _placeholder(context),
-                  errorWidget: (_, __, ___) => _placeholder(context),
-                ),
+                child: url.startsWith('http')
+                    ? CachedNetworkImage(
+                        imageUrl: url,
+                        fit: fit,
+                        width: size,
+                        height: size,
+                        placeholder: (_, __) => _placeholder(context),
+                        errorWidget: (_, __, ___) => _placeholder(context),
+                      )
+                    // Foto sacada con el teléfono (productos propios).
+                    : Image.file(
+                        File(url),
+                        fit: fit,
+                        width: size,
+                        height: size,
+                        errorBuilder: (_, __, ___) => _placeholder(context),
+                      ),
               ),
       ),
     );

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../products/domain/product.dart';
+import '../../products/presentation/create_product_page.dart';
 import '../domain/scan_result.dart';
 import 'scan_controller.dart';
 
@@ -31,7 +33,7 @@ class ScanBanner extends ConsumerWidget {
         ],
       );
     } else {
-      card = _forResult(scan.result, controller);
+      card = _forResult(context, scan.result, controller);
     }
 
     return AnimatedSwitcher(
@@ -50,7 +52,11 @@ class ScanBanner extends ConsumerWidget {
     );
   }
 
-  Widget? _forResult(ScanResult? result, ScanController controller) {
+  Widget? _forResult(
+    BuildContext context,
+    ScanResult? result,
+    ScanController controller,
+  ) {
     switch (result) {
       case null:
         return null;
@@ -111,8 +117,20 @@ class ScanBanner extends ConsumerWidget {
           color: Colors.grey.shade800,
           icon: Icons.help_outline,
           title: 'No conozco este código',
-          body: 'No encontré $barcode en Open Food Facts, ni en tu lista.',
-          actions: [_primary('Seguir', controller.dismiss)],
+          body: 'No encontré $barcode en Open Food Facts, ni en tu lista.\n'
+              'Podés crearlo con tu foto y queda guardado en Mis productos.',
+          actions: [
+            _primary('Crear producto', () async {
+              final created = await Navigator.of(context).push<Product>(
+                MaterialPageRoute(
+                  builder: (_) => CreateProductPage(initialBarcode: barcode),
+                ),
+              );
+              // Lo tiene en la mano: se agrega a la lista ya tachado.
+              if (created != null) await controller.addScannedToList(created);
+            }),
+            _secondary('Seguir', controller.dismiss),
+          ],
         );
     }
   }

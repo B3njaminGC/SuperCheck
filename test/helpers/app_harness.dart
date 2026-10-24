@@ -8,7 +8,9 @@ import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supercheck/app.dart';
 import 'package:supercheck/core/mode/app_mode.dart';
+import 'package:supercheck/features/products/data/product_photo_picker.dart';
 import 'package:supercheck/features/products/data/product_repository.dart';
+import 'package:supercheck/features/products/presentation/my_products_controller.dart';
 import 'package:supercheck/features/products/presentation/product_providers.dart';
 
 /// Abre la app como la ve quien la instala: sin servidor configurado y con las listas
@@ -17,6 +19,7 @@ Future<void> pumpApp(
   WidgetTester tester,
   SharedPreferences prefs, {
   MockClientHandler? offHandler,
+  ProductPhotoPicker? photoPicker,
 }) async {
   final products = ProductRepository(
     client: MockClient(
@@ -35,6 +38,7 @@ Future<void> pumpApp(
         sharedPreferencesProvider.overrideWithValue(prefs),
         cloudAvailableProvider.overrideWithValue(false),
         productRepositoryProvider.overrideWithValue(products),
+        if (photoPicker != null) productPhotoPickerProvider.overrideWithValue(photoPicker),
       ],
       child: const SuperCheckApp(),
     ),

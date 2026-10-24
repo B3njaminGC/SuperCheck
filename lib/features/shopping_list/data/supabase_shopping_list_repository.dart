@@ -174,7 +174,7 @@ class SupabaseShoppingListRepository implements ShoppingListRepository {
           .from('list_items')
           .insert({
             'list_id': listId,
-            'barcode': product.barcode,
+            'barcode': product.hasBarcode ? product.barcode : null,
             'name': product.name,
             'brand': product.brand,
             'quantity_label': product.quantityLabel,

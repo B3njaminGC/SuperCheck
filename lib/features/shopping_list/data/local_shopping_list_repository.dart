@@ -344,7 +344,7 @@ class LocalShoppingListRepository implements ShoppingListRepository {
       listId: listId,
       name: product.name,
       createdAt: now,
-      barcode: product.barcode,
+      barcode: product.hasBarcode ? product.barcode : null,
       brand: product.brand,
       quantityLabel: product.quantityLabel,
       netQuantity: product.netQuantity,

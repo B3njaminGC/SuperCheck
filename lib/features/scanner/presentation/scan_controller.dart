@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/app_exception.dart';
 import '../../products/domain/product.dart';
+import '../../products/presentation/my_products_controller.dart';
 import '../../products/presentation/product_providers.dart';
 import '../../shopping_list/domain/shopping_item.dart';
 import '../../shopping_list/presentation/shopping_list_controller.dart';
@@ -78,9 +79,11 @@ class ScanController extends AutoDisposeFamilyNotifier<ScanState, String> {
       return;
     }
 
-    // 2) Si no está en la lista, se consulta Open Food Facts y se compara.
+    // 2) Si no está en la lista, se busca primero en "Mis productos" y después en
+    //    Open Food Facts, y se compara.
     try {
-      final product = await ref.read(productRepositoryProvider).getByBarcode(code);
+      final product = ref.read(myProductsProvider.notifier).findByBarcode(code) ??
+          await ref.read(productRepositoryProvider).getByBarcode(code);
       _set(
         ScanState(
           result: ScanVerifier.verify(

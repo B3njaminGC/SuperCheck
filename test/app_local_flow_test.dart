@@ -6,7 +6,23 @@ import 'package:http/http.dart' as http;
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:supercheck/features/products/data/product_photo_picker.dart';
+
 import 'helpers/app_harness.dart';
+
+/// Cámara de mentira: "saca" siempre la misma foto.
+class _FakePhotoPicker implements ProductPhotoPicker {
+  int taken = 0;
+
+  @override
+  Future<String?> takePhoto() async {
+    taken++;
+    return '/no/existe/foto.jpg';
+  }
+
+  @override
+  Future<String?> pickFromGallery() async => null;
+}
 
 /// Recorridos completos de la app tal como queda instalada en el teléfono (modo sin
 /// cuenta): se manejan las pantallas de verdad, con toques y texto.
@@ -223,6 +239,76 @@ void main() {
     await tester.tap(find.text('Todas (3)'));
     await settle(tester);
     expect(find.text('Leche entera'), findsOneWidget);
+
+    await closeApp(tester);
+  });
+
+  testWidgets('crear un producto propio con foto: se agrega a la lista y queda en Mis productos',
+      (tester) async {
+    final picker = _FakePhotoPicker();
+    await pumpApp(tester, prefs, photoPicker: picker);
+    await createListViaUi(tester, 'Compras');
+
+    await tester.tap(find.text('Agregar producto'));
+    await settle(tester);
+    await tester.enterText(find.byType(TextField), 'azucar impalpable');
+    await settle(tester, frames: 2);
+    await tester.tap(find.text('Crear producto "azucar impalpable"'));
+    await settle(tester);
+
+    // El formulario ya trae el nombre escrito.
+    expect(find.text('Guardar producto'), findsOneWidget);
+    await tester.tap(find.text('Sacar foto'));
+    await settle(tester);
+    expect(picker.taken, 1);
+    expect(find.text('Quitar foto'), findsOneWidget);
+    await tester.enterText(find.widgetWithText(TextField, 'Marca'), 'Dos Anclas');
+    await tester.enterText(find.widgetWithText(TextField, 'Tamaño'), '300 g');
+    await tester.tap(find.text('Guardar producto'));
+    await settle(tester);
+
+    // Se agregó a la lista actual...
+    expect(find.text('azucar impalpable agregado'), findsOneWidget);
+
+    // ...y queda en la biblioteca, visible al abrir la búsqueda vacía.
+    await tester.tap(find.byTooltip('Borrar'));
+    await settle(tester);
+    expect(find.text('Mis productos'), findsOneWidget);
+    expect(find.text('azucar impalpable'), findsOneWidget);
+    expect(find.text('Dos Anclas · 300 g'), findsOneWidget);
+    expect(find.text('Mío'), findsOneWidget);
+
+    // También aparece al buscarlo.
+    await tester.enterText(find.byType(TextField), 'impalpable');
+    await settle(tester, frames: 2);
+    await tester.tap(find.byTooltip('Buscar'));
+    await settle(tester);
+    expect(find.text('azucar impalpable'), findsOneWidget);
+    expect(find.text('Mío'), findsOneWidget);
+
+    await closeApp(tester);
+  });
+
+  testWidgets('un producto propio sin código no se duplica: al agregarlo de nuevo suma',
+      (tester) async {
+    await pumpApp(tester, prefs, photoPicker: _FakePhotoPicker());
+    await createListViaUi(tester, 'Compras');
+    await tester.tap(find.text('Agregar producto'));
+    await settle(tester);
+    await tester.enterText(find.byType(TextField), 'pan casero');
+    await settle(tester, frames: 2);
+    await tester.tap(find.text('Crear producto "pan casero"'));
+    await settle(tester);
+    await tester.tap(find.text('Guardar producto'));
+    await settle(tester);
+
+    // Tocar la tarjeta (ahora en la biblioteca) lo suma en vez de duplicarlo.
+    await tester.tap(find.byTooltip('Borrar'));
+    await settle(tester);
+    expect(find.text('×1'), findsOneWidget);
+    await tester.tap(find.text('pan casero'));
+    await settle(tester);
+    expect(find.text('×2'), findsOneWidget);
 
     await closeApp(tester);
   });

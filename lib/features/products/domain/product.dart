@@ -11,8 +11,10 @@ class Product extends Equatable {
     this.quantityLabel,
     this.netQuantity,
     this.imageUrl,
+    this.libraryId,
   });
 
+  /// Código de barras. Vacío en los productos propios que no tienen código.
   final String barcode;
   final String name;
   final String? brand;
@@ -22,7 +24,14 @@ class Product extends Equatable {
 
   /// Contenido neto normalizado a g/ml, si se pudo interpretar.
   final NetQuantity? netQuantity;
+  /// Dirección de internet (Open Food Facts) o ruta de una foto guardada en el teléfono.
   final String? imageUrl;
+
+  /// Si no es null, es un producto creado por la persona ("Mis productos").
+  final String? libraryId;
+
+  bool get isMine => libraryId != null;
+  bool get hasBarcode => barcode.isNotEmpty;
 
   /// "Criollitas · 300 g" (o solo lo que haya).
   String get subtitle {
@@ -98,5 +107,5 @@ class Product extends Equatable {
 
   @override
   List<Object?> get props =>
-      [barcode, name, brand, quantityLabel, netQuantity, imageUrl];
+      [barcode, name, brand, quantityLabel, netQuantity, imageUrl, libraryId];
 }

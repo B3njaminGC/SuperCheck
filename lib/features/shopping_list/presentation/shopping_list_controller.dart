@@ -67,9 +67,14 @@ class ShoppingListController
     int quantity = 1,
     bool checked = false,
   }) async {
-    final existing = _items
-        .where((i) => !i.isChecked && BarcodeUtils.isSame(i.barcode, product.barcode))
-        .firstOrNull;
+    final existing = _items.where((i) {
+      if (i.isChecked) return false;
+      if (product.hasBarcode) return BarcodeUtils.isSame(i.barcode, product.barcode);
+      // Producto propio sin código: se reconoce por nombre y marca.
+      return i.barcode == null &&
+          _sameText(i.name, product.name) &&
+          _sameText(i.brand, product.brand);
+    }).firstOrNull;
 
     if (existing != null) {
       if (checked) {
@@ -103,6 +108,9 @@ class ShoppingListController
     }
     await _repo.addCustomItem(arg, _capitalize(clean), desiredQty: quantity);
   }
+
+  static bool _sameText(String? a, String? b) =>
+      (a ?? '').trim().toLowerCase() == (b ?? '').trim().toLowerCase();
 
   static String _capitalize(String s) => s[0].toUpperCase() + s.substring(1);
 
