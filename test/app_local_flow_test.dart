@@ -312,4 +312,65 @@ void main() {
 
     await closeApp(tester);
   });
+
+  testWidgets('favoritos: la estrella los guarda, salen primero y vuelven al reabrir',
+      (tester) async {
+    Future<http.Response> leche(http.Request request) async => http.Response(
+          jsonEncode({
+            'hits': [
+              {'code': '1', 'product_name': 'Leche entera', 'brands': 'La Serenísima'},
+              {'code': '2', 'product_name': 'Leche descremada', 'brands': 'Sancor'},
+              {'code': '3', 'product_name': 'Leche chocolatada', 'brands': 'Sancor'},
+            ],
+          }),
+          200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        );
+
+    await pumpApp(tester, prefs, offHandler: leche);
+    await createListViaUi(tester, 'Compras');
+    await tester.tap(find.text('Agregar producto'));
+    await settle(tester);
+    await tester.enterText(find.byType(TextField), 'leche');
+    await settle(tester, frames: 2);
+    await tester.tap(find.byTooltip('Buscar'));
+    await settle(tester);
+
+    // Se marca "Leche chocolatada" desde su tarjeta.
+    final card = find.ancestor(
+      of: find.text('Leche chocolatada'),
+      matching: find.byType(Card),
+    );
+    await tester.tap(
+      find.descendant(of: card, matching: find.byTooltip('Agregar a favoritos')),
+    );
+    await settle(tester);
+    expect(find.byTooltip('Quitar de favoritos'), findsOneWidget);
+
+    // La marca del favorito queda destacada y sus productos suben.
+    expect(find.text('★ Sancor (2)'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('Leche descremada')).dy,
+      lessThan(tester.getTopLeft(find.text('Leche entera')).dy),
+    );
+
+    // Sin texto, se ofrece la sección Favoritos.
+    await tester.tap(find.byTooltip('Borrar'));
+    await settle(tester);
+    expect(find.text('Favoritos'), findsOneWidget);
+    expect(find.text('Leche chocolatada'), findsOneWidget);
+    expect(find.text('Leche entera'), findsNothing);
+
+    // Al cerrar y abrir la app siguen ahí.
+    await closeApp(tester);
+    await pumpApp(tester, prefs, offHandler: leche);
+    await tester.tap(find.text('Compras'));
+    await settle(tester);
+    await tester.tap(find.text('Agregar producto'));
+    await settle(tester);
+    expect(find.text('Favoritos'), findsOneWidget);
+    expect(find.text('Leche chocolatada'), findsOneWidget);
+
+    await closeApp(tester);
+  });
 }

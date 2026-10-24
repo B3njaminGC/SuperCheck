@@ -10,7 +10,9 @@ import '../../../shared/widgets/state_views.dart';
 import '../../shopping_list/domain/shopping_item.dart';
 import '../../shopping_list/presentation/shopping_list_controller.dart';
 import '../domain/product.dart';
+import '../domain/product_text.dart';
 import 'create_product_page.dart';
+import 'favorites_controller.dart';
 import 'my_products_controller.dart';
 import 'product_providers.dart';
 
@@ -35,6 +37,9 @@ class _ProductSearchPageState extends ConsumerState<ProductSearchPage> {
 
   /// Marca elegida para filtrar los resultados (null = todas).
   String? _brand;
+
+  /// Estante que se muestra antes de buscar (null = el primero que tenga productos).
+  _Shelf? _shelf;
 
   @override
   void dispose() {
@@ -133,6 +138,7 @@ class _ProductSearchPageState extends ConsumerState<ProductSearchPage> {
   Widget build(BuildContext context) {
     final typed = _text.text.trim();
     final library = ref.watch(myProductsProvider);
+    final favorites = ref.watch(favoriteProductsProvider);
     return Scaffold(
       appBar: AppBar(
         title: TextField(
@@ -167,19 +173,7 @@ class _ProductSearchPageState extends ConsumerState<ProductSearchPage> {
         ],
       ),
       body: typed.length < 2 && _query.length < 2
-          ? (library.isEmpty
-              ? const EmptyView(
-                  icon: Icons.search,
-                  title: 'Buscá un producto',
-                  message: 'Escribí el nombre, tocá la lupa y elegí la marca y el '
-                      'tamaño exactos que querés comprar. Si no existe, podés '
-                      'crearlo con tu propia foto; si no tiene código de barras '
-                      '(verdura, pan), elegí "Agregar sin código".',
-                )
-              : _grid(
-                  library,
-                  header: const _SectionTitle('Mis productos'),
-                ))
+          ? _idle(library, favorites)
           : Column(
               children: [
                 // Siempre disponibles, aunque falle la búsqueda en Open Food Facts.
@@ -200,7 +194,7 @@ class _ProductSearchPageState extends ConsumerState<ProductSearchPage> {
   /// Antes de tocar la lupa: ya se muestran los productos propios que coinciden
   /// (no gastan consultas de internet).
   Widget _beforeSearch(String typed) {
-    final mine = ref.read(myProductsProvider.notifier).search(typed);
+    final mine = _localMatches(typed);
     if (mine.isEmpty) {
       return EmptyView(
         icon: Icons.search,
@@ -209,23 +203,25 @@ class _ProductSearchPageState extends ConsumerState<ProductSearchPage> {
       );
     }
     return _grid(
-      mine,
-      header: const _SectionTitle('Mis productos · tocá la lupa para buscar también '
-          'en Open Food Facts'),
+      _ranked(mine),
+      header: const _SectionTitle('Tus productos y favoritos · tocá la lupa para '
+          'buscar también en Open Food Facts'),
     );
   }
 
   Widget _results() {
     final off = ref.watch(productSearchProvider(_query));
-    // Se observa también la biblioteca para que editar/borrar se refleje al instante.
+    // Se observan también la biblioteca y los favoritos para que editar/borrar o
+    // marcar se refleje al instante.
     ref.watch(myProductsProvider);
-    final mine = ref.read(myProductsProvider.notifier).search(_query);
+    ref.watch(favoriteProductsProvider);
+    final mine = _localMatches(_query);
 
     return off.when(
       loading: () => mine.isEmpty
           ? const Center(child: CircularProgressIndicator())
           : _grid(
-              mine,
+              _ranked(mine),
               header: const LinearProgressIndicator(minHeight: 2),
             ),
       error: (e, _) => mine.isEmpty
@@ -234,15 +230,15 @@ class _ProductSearchPageState extends ConsumerState<ProductSearchPage> {
               onRetry: () => ref.invalidate(productSearchProvider(_query)),
             )
           : _grid(
-              mine,
+              _ranked(mine),
               header: _Notice(
                 message: messageOf(e),
                 onRetry: () => ref.invalidate(productSearchProvider(_query)),
               ),
             ),
       data: (found) {
-        // Los productos propios van primero, y si tienen el mismo código que uno de
-        // Open Food Facts, manda el propio (con su foto).
+        // Lo propio y los favoritos van primero, y si tienen el mismo código que uno de
+        // Open Food Facts, manda el guardado (con su foto).
         final mineCodes = {
           for (final p in mine)
             if (p.hasBarcode) BarcodeUtils.normalize(p.barcode),
@@ -261,9 +257,84 @@ class _ProductSearchPageState extends ConsumerState<ProductSearchPage> {
                 'opciones de arriba.',
           );
         }
-        return _grid(products);
+        return _grid(_ranked(products));
       },
     );
+  }
+
+  /// Productos propios y favoritos que coinciden con [text] (sin gastar consultas).
+  List<Product> _localMatches(String text) {
+    final mine = ref.read(myProductsProvider.notifier).search(text);
+    final favorites = [
+      for (final p in ref.read(favoriteProductsProvider))
+        if (!p.isMine && ProductText.matches(text, p)) p,
+    ];
+    return [...mine, ...favorites];
+  }
+
+  /// Orden de los resultados: favoritos, luego productos de una marca favorita, luego
+  /// los propios y al final el resto. Dentro de cada grupo se respeta el orden original.
+  List<Product> _ranked(List<Product> products) {
+    final keys = ref.read(favoriteKeysProvider);
+    final brands = ref.read(favoriteBrandsProvider);
+    int rank(Product p) {
+      if (keys.contains(p.favoriteKey)) return 0;
+      final brand = p.brand?.trim().toLowerCase();
+      if (brand != null && brands.contains(brand)) return 1;
+      return p.isMine ? 2 : 3;
+    }
+
+    final indexed = [for (var i = 0; i < products.length; i++) (i, products[i])];
+    indexed.sort((a, b) {
+      final byRank = rank(a.$2).compareTo(rank(b.$2));
+      return byRank != 0 ? byRank : a.$1.compareTo(b.$1);
+    });
+    return [for (final e in indexed) e.$2];
+  }
+
+  /// Antes de escribir: los favoritos y "Mis productos", para elegir de un toque.
+  Widget _idle(List<Product> library, List<Product> favorites) {
+    if (library.isEmpty && favorites.isEmpty) {
+      return const EmptyView(
+        icon: Icons.search,
+        title: 'Buscá un producto',
+        message: 'Escribí el nombre, tocá la lupa y elegí la marca y el '
+            'tamaño exactos que querés comprar. Tocá la estrella de un producto '
+            'para guardarlo en Favoritos. Si no existe, podés crearlo con tu '
+            'propia foto; si no tiene código de barras (verdura, pan), elegí '
+            '"Agregar sin código".',
+      );
+    }
+
+    var shelf = _shelf ?? (favorites.isNotEmpty ? _Shelf.favorites : _Shelf.mine);
+    if (shelf == _Shelf.favorites && favorites.isEmpty) shelf = _Shelf.mine;
+    if (shelf == _Shelf.mine && library.isEmpty) shelf = _Shelf.favorites;
+
+    final Widget header;
+    if (favorites.isNotEmpty && library.isNotEmpty) {
+      header = Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+        child: Row(
+          children: [
+            ChoiceChip(
+              avatar: const Icon(Icons.star, size: 18),
+              label: const Text('Favoritos'),
+              selected: shelf == _Shelf.favorites,
+              onSelected: (_) => setState(() => _shelf = _Shelf.favorites),
+            ),
+            const SizedBox(width: 8),
+            ChoiceChip(
+              label: const Text('Mis productos'),
+              selected: shelf == _Shelf.mine,
+              onSelected: (_) => setState(() => _shelf = _Shelf.mine),
+            ),
+          ],
+        ),
+      );
+    } else {
+      header = _SectionTitle(favorites.isNotEmpty ? 'Favoritos' : 'Mis productos');
+    }
+    return _grid(shelf == _Shelf.favorites ? favorites : library, header: header);
   }
 
   /// Tarjetas con el filtro por marca arriba. [header] se muestra sobre las tarjetas.
@@ -277,8 +348,13 @@ class _ProductSearchPageState extends ConsumerState<ProductSearchPage> {
       final brand = p.brand;
       if (brand != null) counts[brand] = (counts[brand] ?? 0) + 1;
     }
+    final favoriteKeys = ref.watch(favoriteKeysProvider);
+    final favoriteBrands = ref.watch(favoriteBrandsProvider);
+    bool isFavBrand(String brand) => favoriteBrands.contains(brand.trim().toLowerCase());
     final brands = counts.keys.toList()
       ..sort((a, b) {
+        final byFav = (isFavBrand(b) ? 1 : 0).compareTo(isFavBrand(a) ? 1 : 0);
+        if (byFav != 0) return byFav;
         final byCount = counts[b]!.compareTo(counts[a]!);
         return byCount != 0 ? byCount : a.compareTo(b);
       });
@@ -308,7 +384,7 @@ class _ProductSearchPageState extends ConsumerState<ProductSearchPage> {
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: ChoiceChip(
-                      label: Text('$brand (${counts[brand]})'),
+                      label: Text('${isFavBrand(brand) ? '★ ' : ''}$brand (${counts[brand]})'),
                       selected: active == brand,
                       onSelected: (_) => setState(() => _brand = brand),
                     ),
@@ -332,6 +408,10 @@ class _ProductSearchPageState extends ConsumerState<ProductSearchPage> {
                 product: product,
                 quantityInList: _inList(items, product)?.desiredQty,
                 onAdd: () => _add(product),
+                isFavorite: favoriteKeys.contains(product.favoriteKey),
+                onToggleFavorite: product.canBeFavorite
+                    ? () => ref.read(favoritesProvider.notifier).toggle(product)
+                    : null,
                 onLongPress: product.isMine ? () => _manage(product) : null,
               );
             },
@@ -357,6 +437,8 @@ class _ProductSearchPageState extends ConsumerState<ProductSearchPage> {
     return null;
   }
 }
+
+enum _Shelf { favorites, mine }
 
 class _SectionTitle extends StatelessWidget {
   const _SectionTitle(this.text);
@@ -399,12 +481,16 @@ class _ProductCard extends StatelessWidget {
     required this.product,
     required this.quantityInList,
     required this.onAdd,
+    required this.isFavorite,
+    this.onToggleFavorite,
     this.onLongPress,
   });
 
   final Product product;
   final int? quantityInList;
   final VoidCallback onAdd;
+  final bool isFavorite;
+  final VoidCallback? onToggleFavorite;
   final VoidCallback? onLongPress;
 
   @override
@@ -457,17 +543,33 @@ class _ProductCard extends StatelessWidget {
                         padding: EdgeInsets.zero,
                       ),
                     ),
-                  if (product.isMine)
-                    Positioned(
-                      right: 6,
-                      top: 6,
-                      child: Chip(
-                        label: const Text('Mío'),
-                        visualDensity: VisualDensity.compact,
-                        padding: EdgeInsets.zero,
-                        backgroundColor: theme.colorScheme.tertiaryContainer,
-                      ),
+                  Positioned(
+                    right: 2,
+                    top: 2,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (product.isMine)
+                          Chip(
+                            label: const Text('Mío'),
+                            visualDensity: VisualDensity.compact,
+                            padding: EdgeInsets.zero,
+                            backgroundColor: theme.colorScheme.tertiaryContainer,
+                          ),
+                        if (onToggleFavorite != null)
+                          IconButton(
+                            onPressed: onToggleFavorite,
+                            tooltip:
+                                isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos',
+                            visualDensity: VisualDensity.compact,
+                            icon: Icon(
+                              isFavorite ? Icons.star : Icons.star_border,
+                              color: isFavorite ? Colors.amber.shade700 : null,
+                            ),
+                          ),
+                      ],
                     ),
+                  ),
                 ],
               ),
             ),

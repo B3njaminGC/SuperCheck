@@ -7,6 +7,7 @@ import '../data/my_products_repository.dart';
 import '../data/product_photo_picker.dart';
 import '../domain/net_quantity.dart';
 import '../domain/product.dart';
+import '../domain/product_text.dart';
 
 final productPhotoPickerProvider =
     Provider<ProductPhotoPicker>((ref) => DevicePhotoPicker());
@@ -94,28 +95,9 @@ class MyProductsController extends Notifier<List<Product>> {
   /// Productos propios que contienen todas las palabras de [query]
   /// (sin importar mayúsculas ni tildes), buscando en nombre, marca y tamaño.
   List<Product> search(String query) {
-    final words = _fold(query).split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
-    if (words.isEmpty) return const [];
     return [
       for (final p in state)
-        if (_matchesAll(words, _fold('${p.name} ${p.brand ?? ''} ${p.quantityLabel ?? ''}')))
-          p,
+        if (ProductText.matches(query, p)) p,
     ];
-  }
-
-  static bool _matchesAll(List<String> words, String haystack) =>
-      words.every(haystack.contains);
-
-  static String _fold(String text) {
-    const from = 'áàäâéèëêíìïîóòöôúùüûñ';
-    const to = 'aaaaeeeeiiiioooouuuun';
-    final lower = text.toLowerCase();
-    final out = StringBuffer();
-    for (final rune in lower.runes) {
-      final ch = String.fromCharCode(rune);
-      final i = from.indexOf(ch);
-      out.write(i >= 0 ? to[i] : ch);
-    }
-    return out.toString();
   }
 }

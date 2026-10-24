@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 
+import '../../../core/utils/barcode_utils.dart';
 import 'net_quantity.dart';
 
 /// Producto del catálogo (Open Food Facts), listo para agregar a una lista.
@@ -104,6 +105,15 @@ class Product extends Equatable {
     final first = brands.split(',').first.trim();
     return first.isEmpty ? null : first;
   }
+
+  /// Identifica al producto entre favoritos: los propios por su id, el resto por el
+  /// código de barras (sin ceros a la izquierda, así UPC-A y EAN-13 son el mismo).
+  String get favoriteKey => libraryId != null
+      ? 'own:$libraryId'
+      : 'bc:${BarcodeUtils.normalize(barcode)}';
+
+  /// Se puede marcar como favorito si es propio o tiene código de barras.
+  bool get canBeFavorite => libraryId != null || BarcodeUtils.normalize(barcode).isNotEmpty;
 
   @override
   List<Object?> get props =>
