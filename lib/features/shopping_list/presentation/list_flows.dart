@@ -120,13 +120,15 @@ Future<void> shareListCopy(
 ) async {
   final messenger = ScaffoldMessenger.of(context);
   final transfer = ref.read(listTransferProvider);
+  debugPrint('DBG shareListCopy');
   try {
     await transfer.send(list);
   } on AppException catch (e) {
     messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(e.message)));
-  } catch (_) {
+  } catch (e) {
+    debugPrint('DBG error $e');
     messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(

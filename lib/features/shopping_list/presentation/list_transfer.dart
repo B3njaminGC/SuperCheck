@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -65,7 +66,9 @@ class ListTransfer {
 
   /// Abre el menú de compartir con el mensaje de [list].
   Future<void> send(ShoppingList list) async {
+    debugPrint('DBG send start ${list.id}');
     final shared = await snapshot(list);
+    debugPrint('DBG snapshot items=${shared.items.length}');
     if (shared.items.isEmpty) {
       throw const AppException('La lista está vacía: agregá productos antes de enviarla.');
     }
