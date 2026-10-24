@@ -32,8 +32,10 @@ jobs:
       # encima del anterior sin perder las listas guardadas en el teléfono.
       - name: Llave de firma estable
         run: |
-          mkdir -p ~/.android
+          mkdir -p ~/.android ~/.gradle/init.d
           cp android-signing/debug.keystore ~/.android/debug.keystore
+          cp tools/signing.init.gradle ~/.gradle/init.d/signing.gradle
+          echo "SUPERCHECK_KEYSTORE=$GITHUB_WORKSPACE/android-signing/debug.keystore" >> "$GITHUB_ENV"
 
       - name: Carpeta android/
         run: |
@@ -65,11 +67,22 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
 
-      - name: Huella de la firma
+      # Si la firma no es la llave fija, el APK no se publica: no se podría actualizar encima.
+      - name: Comprobar la firma
         run: |
           cp build/app/outputs/flutter-apk/app-release.apk SuperCheck.apk
-          fp=$($ANDROID_HOME/build-tools/*/apksigner verify --print-certs SuperCheck.apk | grep -i "SHA-256" | head -1)
-          echo "::notice title=Huella de la firma::$fp"
+          expected=$(keytool -list -keystore android-signing/debug.keystore -storepass android \
+            | grep -i "SHA-256" | sed 's/.*: //' | tr -d ':' | tr 'a-f' 'A-F')
+          tool=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
+          actual=$("$tool" verify --print-certs SuperCheck.apk | grep -i "SHA-256 digest" | head -1 \
+            | sed 's/.*: //' | tr 'a-f' 'A-F')
+          echo "esperada: $expected"
+          echo "obtenida: $actual"
+          if [ "$expected" != "$actual" ]; then
+            echo "::error title=Firma incorrecta::esperada $expected, obtenida $actual"
+            exit 1
+          fi
+          echo "::notice title=Huella de la firma::$actual"
           ls -l SuperCheck.apk
 
       - uses: actions/upload-artifact@v4
