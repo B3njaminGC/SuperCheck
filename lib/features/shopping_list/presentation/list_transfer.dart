@@ -46,18 +46,18 @@ class ListTransfer {
   /// Lee la lista tal como está ahora (sin avance del carrito).
   Future<SharedList> snapshot(ShoppingList list) async {
     final repo = _ref.read(shoppingListRepositoryProvider);
-    debugPrint('DBG repo ${repo.runtimeType} ${identityHashCode(repo)}');
+    print('DBG repo ${repo.runtimeType} ${identityHashCode(repo)}');
     final completer = Completer<List<ShoppingItem>>();
     final sub = repo.watchItems(list.id).listen(
       (v) {
-        debugPrint('DBG event ${v.length}');
+        print('DBG event ${v.length}');
         if (!completer.isCompleted) completer.complete(v);
       },
       onError: (Object e) {
-        debugPrint('DBG streamerr $e');
+        print('DBG streamerr $e');
         if (!completer.isCompleted) completer.completeError(e);
       },
-      onDone: () => debugPrint('DBG done'),
+      onDone: () => print('DBG done'),
     );
     final items = await completer.future;
     await sub.cancel();
@@ -82,15 +82,17 @@ class ListTransfer {
 
   /// Abre el menú de compartir con el mensaje de [list].
   Future<void> send(ShoppingList list) async {
-    debugPrint('DBG send start ${list.id}');
+    print('DBG send start ${list.id}');
     final shared = await snapshot(list);
-    debugPrint('DBG snapshot items=${shared.items.length}');
+    print('DBG snapshot items=${shared.items.length}');
     if (shared.items.isEmpty) {
       throw const AppException('La lista está vacía: agregá productos antes de enviarla.');
     }
+    print('DBG before share');
     await _ref
         .read(listSharerProvider)
         .share(ListShareCodec.toMessage(shared), subject: list.name);
+    print('DBG after share');
   }
 
   /// La lista activa que ya viene de esta misma copia, si existe.

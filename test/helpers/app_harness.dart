@@ -105,5 +105,8 @@ class FakeListSharer implements ListSharer {
   final sent = <String>[];
 
   @override
-  Future<void> share(String text, {String? subject}) async => sent.add(text);
+  Future<void> share(String text, {String? subject}) async {
+    print('DBG fake share called');
+    sent.add(text);
+  }
 }

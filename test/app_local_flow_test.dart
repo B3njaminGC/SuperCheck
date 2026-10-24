@@ -386,6 +386,7 @@ void main() {
     await settle(tester);
     await tester.tap(find.text('Enviar copia de la lista'));
     await settle(tester);
+    print('DBG test checking sent=${sharer.sent.length}');
     final avisos = find.descendant(of: find.byType(SnackBar), matching: find.byType(Text));
     expect(
       sharer.sent,
