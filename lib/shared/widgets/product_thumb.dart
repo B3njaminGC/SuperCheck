@@ -3,10 +3,18 @@ import 'package:flutter/material.dart';
 
 /// Miniatura de producto; si no hay imagen (o falla), muestra un ícono.
 class ProductThumb extends StatelessWidget {
-  const ProductThumb({super.key, this.imageUrl, this.size = 48});
+  const ProductThumb({
+    super.key,
+    this.imageUrl,
+    this.size = 48,
+    this.fit = BoxFit.cover,
+  });
 
   final String? imageUrl;
   final double size;
+
+  /// `BoxFit.contain` muestra el envase completo sobre fondo blanco (tarjetas grandes).
+  final BoxFit fit;
 
   @override
   Widget build(BuildContext context) {
@@ -18,11 +26,16 @@ class ProductThumb extends StatelessWidget {
         height: size,
         child: (url == null || url.isEmpty)
             ? _placeholder(context)
-            : CachedNetworkImage(
-                imageUrl: url,
-                fit: BoxFit.cover,
-                placeholder: (_, __) => _placeholder(context),
-                errorWidget: (_, __, ___) => _placeholder(context),
+            : ColoredBox(
+                color: Colors.white,
+                child: CachedNetworkImage(
+                  imageUrl: url,
+                  fit: fit,
+                  width: size,
+                  height: size,
+                  placeholder: (_, __) => _placeholder(context),
+                  errorWidget: (_, __, ___) => _placeholder(context),
+                ),
               ),
       ),
     );

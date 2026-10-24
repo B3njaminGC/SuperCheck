@@ -61,10 +61,11 @@ class Product extends Equatable {
       quantityLabel: quantityLabel,
       netQuantity: net,
       imageUrl: _firstNonEmpty([
-        _string(json['image_front_small_url']),
+        // La más grande primero: en tarjetas la chica se ve borrosa.
         _string(json['image_front_url']),
-        _string(json['image_small_url']),
+        _string(json['image_front_small_url']),
         _string(json['image_url']),
+        _string(json['image_small_url']),
       ]),
     );
   }

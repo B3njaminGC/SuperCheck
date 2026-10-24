@@ -27,6 +27,9 @@ class _ProductSearchPageState extends ConsumerState<ProductSearchPage> {
   /// consulta cuando la persona toca la lupa o "Buscar" en el teclado.
   String _query = '';
 
+  /// Marca elegida para filtrar los resultados (null = todas).
+  String? _brand;
+
   @override
   void dispose() {
     _text.dispose();
@@ -39,7 +42,10 @@ class _ProductSearchPageState extends ConsumerState<ProductSearchPage> {
     final text = (value ?? _text.text).trim();
     if (text.length < 2) return;
     FocusScope.of(context).unfocus();
-    setState(() => _query = text);
+    setState(() {
+      _query = text;
+      _brand = null;
+    });
   }
 
   ShoppingListController get _list =>
@@ -86,7 +92,10 @@ class _ProductSearchPageState extends ConsumerState<ProductSearchPage> {
               tooltip: 'Borrar',
               onPressed: () {
                 _text.clear();
-                setState(() => _query = '');
+                setState(() {
+                  _query = '';
+                  _brand = null;
+                });
               },
             ),
           IconButton(
@@ -146,43 +155,168 @@ class _ProductSearchPageState extends ConsumerState<ProductSearchPage> {
                 'sin código con la opción de arriba.',
           );
         }
-        return ListView.separated(
-          itemCount: products.length,
-          separatorBuilder: (_, __) => const Divider(height: 1),
-          itemBuilder: (_, i) {
-            final product = products[i];
-            final existing = items
-                .where((it) => !it.isChecked && it.matchesBarcode(product.barcode))
-                .firstOrNull;
+        final counts = <String, int>{};
+        for (final p in products) {
+          final brand = p.brand;
+          if (brand != null) counts[brand] = (counts[brand] ?? 0) + 1;
+        }
+        final brands = counts.keys.toList()
+          ..sort((a, b) {
+            final byCount = counts[b]!.compareTo(counts[a]!);
+            return byCount != 0 ? byCount : a.compareTo(b);
+          });
+        final shown =
+            _brand == null ? products : products.where((p) => p.brand == _brand).toList();
 
-            return ListTile(
-              leading: ProductThumb(imageUrl: product.imageUrl, size: 52),
-              title: Text(product.name, maxLines: 2, overflow: TextOverflow.ellipsis),
-              subtitle: Text(
-                product.subtitle.isEmpty
-                    ? 'Sin datos de marca ni tamaño'
-                    : product.subtitle,
-              ),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (existing != null)
-                    Text(
-                      '×${existing.desiredQty}',
-                      style: Theme.of(context).textTheme.titleMedium,
+        return Column(
+          children: [
+            if (brands.length > 1)
+              SizedBox(
+                height: 52,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text('Todas (${products.length})'),
+                        selected: _brand == null,
+                        onSelected: (_) => setState(() => _brand = null),
+                      ),
                     ),
-                  IconButton(
-                    icon: const Icon(Icons.add_circle),
-                    tooltip: existing == null ? 'Agregar' : 'Sumar una unidad',
-                    onPressed: () => _add(product),
-                  ),
-                ],
+                    for (final brand in brands)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text('$brand (${counts[brand]})'),
+                          selected: _brand == brand,
+                          onSelected: (_) => setState(() => _brand = brand),
+                        ),
+                      ),
+                  ],
+                ),
               ),
-              onTap: () => _add(product),
-            );
-          },
+            Expanded(
+              child: GridView.builder(
+                padding: const EdgeInsets.all(12),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 0.68,
+                ),
+                itemCount: shown.length,
+                itemBuilder: (_, i) {
+                  final product = shown[i];
+                  final existing = items
+                      .where((it) => !it.isChecked && it.matchesBarcode(product.barcode))
+                      .firstOrNull;
+                  return _ProductCard(
+                    product: product,
+                    quantityInList: existing?.desiredQty,
+                    onAdd: () => _add(product),
+                  );
+                },
+              ),
+            ),
+          ],
         );
       },
+    );
+  }
+}
+
+/// Tarjeta de producto: imagen grande arriba para reconocer el envase de un vistazo.
+class _ProductCard extends StatelessWidget {
+  const _ProductCard({
+    required this.product,
+    required this.quantityInList,
+    required this.onAdd,
+  });
+
+  final Product product;
+  final int? quantityInList;
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final subtitle =
+        product.subtitle.isEmpty ? 'Sin datos de marca ni tamaño' : product.subtitle;
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      margin: EdgeInsets.zero,
+      child: InkWell(
+        onTap: onAdd,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AspectRatio(
+              aspectRatio: 1,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  LayoutBuilder(
+                    builder: (_, c) => ProductThumb(
+                      imageUrl: product.imageUrl,
+                      size: c.maxWidth,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  Positioned(
+                    right: 6,
+                    bottom: 6,
+                    child: Tooltip(
+                      message: quantityInList == null ? 'Agregar' : 'Sumar una unidad',
+                      child: CircleAvatar(
+                        radius: 16,
+                        backgroundColor: theme.colorScheme.primary,
+                        foregroundColor: theme.colorScheme.onPrimary,
+                        child: const Icon(Icons.add, size: 20),
+                      ),
+                    ),
+                  ),
+                  if (quantityInList != null)
+                    Positioned(
+                      left: 6,
+                      top: 6,
+                      child: Chip(
+                        label: Text('×$quantityInList'),
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      product.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

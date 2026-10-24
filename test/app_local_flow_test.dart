@@ -184,4 +184,45 @@ void main() {
 
     await closeApp(tester);
   });
+
+  testWidgets('los resultados se muestran en tarjetas y se filtran por marca',
+      (tester) async {
+    await pumpApp(tester, prefs, offHandler: (request) async {
+      return http.Response(
+        jsonEncode({
+          'hits': [
+            {'code': '1', 'product_name': 'Leche entera', 'brands': 'La Serenísima'},
+            {'code': '2', 'product_name': 'Leche descremada', 'brands': 'Sancor'},
+            {'code': '3', 'product_name': 'Leche chocolatada', 'brands': 'Sancor'},
+          ],
+        }),
+        200,
+        headers: {'content-type': 'application/json; charset=utf-8'},
+      );
+    });
+    await createListViaUi(tester, 'Compras');
+    await tester.tap(find.text('Agregar producto'));
+    await settle(tester);
+    await tester.enterText(find.byType(TextField), 'leche');
+    await tester.tap(find.byTooltip('Buscar'));
+    await settle(tester);
+
+    expect(find.byType(GridView), findsOneWidget);
+    expect(find.text('Leche entera'), findsOneWidget);
+    expect(find.text('Leche descremada'), findsOneWidget);
+    expect(find.text('Todas (3)'), findsOneWidget);
+    expect(find.text('Sancor (2)'), findsOneWidget);
+
+    await tester.tap(find.text('Sancor (2)'));
+    await settle(tester);
+    expect(find.text('Leche entera'), findsNothing);
+    expect(find.text('Leche descremada'), findsOneWidget);
+    expect(find.text('Leche chocolatada'), findsOneWidget);
+
+    await tester.tap(find.text('Todas (3)'));
+    await settle(tester);
+    expect(find.text('Leche entera'), findsOneWidget);
+
+    await closeApp(tester);
+  });
 }
