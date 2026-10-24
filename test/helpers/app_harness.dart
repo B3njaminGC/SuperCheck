@@ -13,14 +13,19 @@ import 'package:supercheck/features/products/presentation/product_providers.dart
 
 /// Abre la app como la ve quien la instala: sin servidor configurado y con las listas
 /// guardadas en el teléfono. La búsqueda de Open Food Facts responde "sin resultados".
-Future<void> pumpApp(WidgetTester tester, SharedPreferences prefs) async {
+Future<void> pumpApp(
+  WidgetTester tester,
+  SharedPreferences prefs, {
+  MockClientHandler? offHandler,
+}) async {
   final products = ProductRepository(
     client: MockClient(
-      (_) async => http.Response(
-        jsonEncode({'products': <Object>[]}),
-        200,
-        headers: {'content-type': 'application/json; charset=utf-8'},
-      ),
+      offHandler ??
+          (_) async => http.Response(
+                jsonEncode({'products': <Object>[]}),
+                200,
+                headers: {'content-type': 'application/json; charset=utf-8'},
+              ),
     ),
   );
 

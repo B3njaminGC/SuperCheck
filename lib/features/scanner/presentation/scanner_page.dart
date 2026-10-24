@@ -34,6 +34,11 @@ class _ScannerPageState extends ConsumerState<ScannerPage>
 
   Timer? _autoDismiss;
 
+  // Solo se reanuda la cámara si la apagamos nosotros al ir a segundo plano. Si no, al
+  // volver del cuadro de permiso se pedía un segundo arranque mientras el primero seguía
+  // en curso y la cámara quedaba en error aunque el permiso estuviera concedido.
+  bool _pausedByUs = false;
+
   // Evita contar dos veces el mismo código si la cámara lo relee de seguido.
   String? _lastCode;
   DateTime _lastAt = DateTime.fromMillisecondsSinceEpoch(0);
@@ -57,13 +62,27 @@ class _ScannerPageState extends ConsumerState<ScannerPage>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     switch (state) {
       case AppLifecycleState.resumed:
-        unawaited(_safely(_camera.start));
+        if (_pausedByUs) {
+          _pausedByUs = false;
+          unawaited(_safely(_camera.start));
+        }
       case AppLifecycleState.inactive:
       case AppLifecycleState.paused:
       case AppLifecycleState.hidden:
       case AppLifecycleState.detached:
-        unawaited(_safely(_camera.stop));
+        if (_camera.value.isRunning) {
+          _pausedByUs = true;
+          unawaited(_safely(_camera.stop));
+        }
     }
+  }
+
+  Future<void> _retry() async {
+    _pausedByUs = false;
+    try {
+      await _camera.stop();
+    } catch (_) {}
+    await _safely(_camera.start);
   }
 
   Future<void> _safely(Future<void> Function() action) async {
@@ -141,9 +160,16 @@ class _ScannerPageState extends ConsumerState<ScannerPage>
           MobileScanner(
             controller: _camera,
             onDetect: _onDetect,
-            errorBuilder: (context, error, child) => _CameraError(error: error),
+            errorBuilder: (context, error, child) =>
+                _CameraError(error: error, onRetry: _retry),
           ),
-          const IgnorePointer(child: _ScanFrame()),
+          // El marco se oculta si la cámara falló: ahí se muestra el aviso con "Reintentar".
+          ValueListenableBuilder<MobileScannerState>(
+            valueListenable: _camera,
+            builder: (context, value, _) => value.error == null
+                ? const IgnorePointer(child: _ScanFrame())
+                : const SizedBox.shrink(),
+          ),
           Positioned(
             left: 16,
             right: 16,
@@ -185,9 +211,10 @@ class _ScanFrame extends StatelessWidget {
 }
 
 class _CameraError extends StatelessWidget {
-  const _CameraError({required this.error});
+  const _CameraError({required this.error, required this.onRetry});
 
   final MobileScannerException error;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -207,6 +234,22 @@ class _CameraError extends StatelessWidget {
                   : 'No se pudo iniciar la cámara.',
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.white),
+            ),
+            const SizedBox(height: 8),
+            // Detalle técnico: ayuda a entender qué falló si el problema sigue.
+            Text(
+              [
+                error.errorCode.name,
+                if (error.errorDetails?.message != null) error.errorDetails!.message!,
+              ].join(': '),
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white54, fontSize: 12),
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Reintentar'),
             ),
           ],
         ),

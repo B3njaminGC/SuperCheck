@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -133,6 +136,51 @@ void main() {
     await tester.tap(find.text('Compras del mes'));
     await settle(tester);
     expect(find.text('Pan'), findsOneWidget);
+
+    await closeApp(tester);
+  });
+
+  testWidgets('la búsqueda solo consulta al tocar la lupa, no mientras se escribe',
+      (tester) async {
+    var requests = 0;
+    await pumpApp(tester, prefs, offHandler: (request) async {
+      requests++;
+      return http.Response(
+        jsonEncode({
+          'hits': [
+            {
+              'code': '7790001000011',
+              'product_name': 'Leche entera',
+              'brands': 'La Serenísima',
+              'quantity': '1 l',
+            },
+          ],
+        }),
+        200,
+        headers: {'content-type': 'application/json; charset=utf-8'},
+      );
+    });
+    await createListViaUi(tester, 'Compras');
+
+    await tester.tap(find.text('Agregar producto'));
+    await settle(tester);
+    for (final text in ['le', 'lec', 'leche']) {
+      await tester.enterText(find.byType(TextField), text);
+      await settle(tester, frames: 6);
+    }
+    expect(requests, 0);
+    expect(find.text('Tocá la lupa para buscar'), findsOneWidget);
+    // Lo que no tiene código se puede agregar sin buscar nada.
+    expect(find.text('Agregar "leche" sin código'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Buscar'));
+    await settle(tester);
+    expect(requests, 1);
+    expect(find.text('Leche entera'), findsOneWidget);
+
+    await tester.tap(find.text('Leche entera'));
+    await settle(tester);
+    expect(find.text('Leche entera agregado'), findsOneWidget);
 
     await closeApp(tester);
   });

@@ -11,19 +11,24 @@ import '../domain/product.dart';
 /// Acceso al catálogo de Open Food Facts.
 ///
 /// - Por código de barras: `GET /api/v2/product/{barcode}.json`
-/// - Por nombre: `GET /cgi/search.pl` (búsqueda de texto).
-///   OJO: el endpoint `/api/v2/search` de OFF filtra por etiquetas (marca, categoría,
-///   país...) pero no hace búsqueda de texto libre por nombre. Si más adelante querés
-///   mejor relevancia, el reemplazo es Search-a-licious; solo habría que cambiar
-///   [_searchUri] y el parseo de la respuesta.
+/// - Por nombre: primero Search-a-licious (`search.openfoodfacts.org/search`), el buscador
+///   de texto pensado para este uso. Si falla o responde algo inesperado, se usa el
+///   buscador clásico `GET /cgi/search.pl`, que solo permite 10 búsquedas por minuto por
+///   IP y responde 503 al pasarse.
+///   OJO: el endpoint `/api/v2/search` de OFF filtra por etiquetas pero no hace búsqueda
+///   de texto libre por nombre.
 class ProductRepository {
   ProductRepository({
     required http.Client client,
     String host = AppConstants.offHost,
     String? countryTag = AppConstants.offDefaultCountryTag,
     bool fallbackToWorld = true,
+    bool useSearchALicious = true,
+    String searchHost = AppConstants.offSearchHost,
     Duration timeout = AppConstants.httpTimeout,
   })  : _client = client,
+        _useSearchALicious = useSearchALicious,
+        _searchHost = searchHost,
         _host = host,
         _countryTag = countryTag,
         _fallbackToWorld = fallbackToWorld,
@@ -33,6 +38,8 @@ class ProductRepository {
   final String _host;
   final String? _countryTag;
   final bool _fallbackToWorld;
+  final bool _useSearchALicious;
+  final String _searchHost;
   final Duration _timeout;
 
   static const _headers = {
@@ -52,6 +59,21 @@ class ProductRepository {
     final term = query.trim();
     if (term.length < 2) return const [];
 
+    if (_useSearchALicious) {
+      try {
+        return await _searchModern(term, page: page, pageSize: pageSize);
+      } on AppException {
+        // Cae al buscador clásico: mejor uno limitado que ninguno.
+      }
+    }
+    return _searchLegacy(term, page: page, pageSize: pageSize);
+  }
+
+  Future<List<Product>> _searchLegacy(
+    String term, {
+    required int page,
+    required int pageSize,
+  }) async {
     final country = _countryTag;
     if (country != null) {
       final local = await _search(
@@ -88,6 +110,104 @@ class ProductRepository {
   }
 
   // ---------------------------------------------------------------------
+
+  /// Search-a-licious: `GET /search?q=...`, con el país como filtro de la consulta.
+  Future<List<Product>> _searchModern(
+    String term, {
+    required int page,
+    required int pageSize,
+  }) async {
+    // Los caracteres de la sintaxis de consulta romperían la búsqueda.
+    final clean = term.replaceAll(RegExp(r'[\"():\\\[\]{}^~*?!/]'), ' ').trim();
+    if (clean.length < 2) return const [];
+
+    final country = _countryTag;
+    if (country != null) {
+      final local = await _modernRequest(
+        '$clean AND countries_tags:"en:$country"',
+        page: page,
+        pageSize: pageSize,
+      );
+      if (local.isNotEmpty || !_fallbackToWorld || page > 1) return local;
+    }
+    return _modernRequest(clean, page: page, pageSize: pageSize);
+  }
+
+  Future<List<Product>> _modernRequest(
+    String q, {
+    required int page,
+    required int pageSize,
+  }) async {
+    final uri = Uri.https(_searchHost, '/search', {
+      'q': q,
+      'langs': 'es',
+      'page': '$page',
+      'page_size': '$pageSize',
+    });
+    final response = await _get(uri);
+    _ensureSuccess(response);
+
+    final hits = _decode(response)['hits'];
+    if (hits is! List) {
+      throw const DataParsingException('Respuesta inesperada del buscador.');
+    }
+
+    final seen = <String>{};
+    final results = <Product>[];
+    for (final raw in hits) {
+      if (raw is! Map) continue;
+      final product = Product.tryFromOffJson(_flattenHit(raw));
+      if (product != null && seen.add(product.barcode)) {
+        results.add(product);
+      }
+    }
+    return results;
+  }
+
+  static const _hitTextFields = [
+    'code',
+    'product_name',
+    'product_name_es',
+    'generic_name',
+    'brands',
+    'quantity',
+    'product_quantity_unit',
+    'image_front_small_url',
+    'image_front_url',
+    'image_small_url',
+    'image_url',
+  ];
+
+  /// Search-a-licious puede devolver textos como cadena, lista (marcas) o un mapa por
+  /// idioma (nombres). Se pasan al formato plano que entiende [Product.tryFromOffJson].
+  static Map<String, dynamic> _flattenHit(Map raw) {
+    final hit = <String, dynamic>{...raw.cast<String, dynamic>()};
+    for (final key in _hitTextFields) {
+      final flat = _flatten(hit[key]);
+      if (flat != null) hit[key] = flat;
+    }
+    return hit;
+  }
+
+  static String? _flatten(Object? value) {
+    if (value is String) return value;
+    if (value is num) return value.toString();
+    if (value is List) {
+      final parts = value.map(_flatten).whereType<String>().where((s) => s.isNotEmpty);
+      return parts.isEmpty ? null : parts.join(',');
+    }
+    if (value is Map) {
+      for (final key in const ['es', 'main', 'en']) {
+        final flat = _flatten(value[key]);
+        if (flat != null && flat.isNotEmpty) return flat;
+      }
+      for (final v in value.values) {
+        final flat = _flatten(v);
+        if (flat != null && flat.isNotEmpty) return flat;
+      }
+    }
+    return null;
+  }
 
   Uri _searchUri(
     String term, {
@@ -163,6 +283,13 @@ class ProductRepository {
     if (code == 429) {
       throw const RateLimitException(
         'Demasiadas búsquedas seguidas. Esperá unos segundos e intentá de nuevo.',
+      );
+    }
+    if (code == 502 || code == 503 || code == 504) {
+      throw RemoteServiceException(
+        'Open Food Facts está saturado o limitó las búsquedas ($code). '
+        'Probá de nuevo en un minuto, o agregalo sin código.',
+        statusCode: code,
       );
     }
     throw RemoteServiceException(

@@ -4,9 +4,13 @@ abstract final class AppConstants {
   // --- Open Food Facts -------------------------------------------------
   static const offHost = 'world.openfoodfacts.org';
 
+  /// Buscador de texto moderno de Open Food Facts (Search-a-licious). Aguanta mucho
+  /// más tráfico que `/cgi/search.pl`, que limita a 10 búsquedas por minuto por IP.
+  static const offSearchHost = 'search.openfoodfacts.org';
+
   /// Open Food Facts pide identificar a la app en el User-Agent.
-  /// Reemplazá el contacto por un mail real tuyo antes de publicar.
-  static const offUserAgent = 'SuperCheck/0.1.0 (contacto: TU_EMAIL_AQUI)';
+  static const offUserAgent =
+      'SuperCheck/0.1.0 (https://github.com/B3njaminGC/SuperCheck)';
 
   /// Etiqueta de país para priorizar productos vendidos en Argentina.
   /// Poné `null` para buscar en todo el mundo.

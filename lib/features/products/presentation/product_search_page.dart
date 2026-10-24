@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -24,28 +22,24 @@ class ProductSearchPage extends ConsumerStatefulWidget {
 
 class _ProductSearchPageState extends ConsumerState<ProductSearchPage> {
   final _text = TextEditingController();
-  Timer? _debounce;
+
+  /// Último texto buscado. Open Food Facts limita las búsquedas, así que solo se
+  /// consulta cuando la persona toca la lupa o "Buscar" en el teclado.
   String _query = '';
 
   @override
   void dispose() {
-    _debounce?.cancel();
     _text.dispose();
     super.dispose();
   }
 
-  // Open Food Facts limita las búsquedas: se espera a que termine de escribir.
-  void _onChanged(String value) {
-    setState(() {}); // refresca el botón de borrar
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 450), () {
-      if (mounted) setState(() => _query = value.trim());
-    });
-  }
+  void _onChanged(String _) => setState(() {}); // refresca lupa, borrar y "sin código"
 
-  void _searchNow(String value) {
-    _debounce?.cancel();
-    setState(() => _query = value.trim());
+  void _searchNow([String? value]) {
+    final text = (value ?? _text.text).trim();
+    if (text.length < 2) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _query = text);
   }
 
   ShoppingListController get _list =>
@@ -71,6 +65,7 @@ class _ProductSearchPageState extends ConsumerState<ProductSearchPage> {
 
   @override
   Widget build(BuildContext context) {
+    final typed = _text.text.trim();
     return Scaffold(
       appBar: AppBar(
         title: TextField(
@@ -88,28 +83,43 @@ class _ProductSearchPageState extends ConsumerState<ProductSearchPage> {
           if (_text.text.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.clear),
+              tooltip: 'Borrar',
               onPressed: () {
-                _debounce?.cancel();
                 _text.clear();
                 setState(() => _query = '');
               },
             ),
+          IconButton(
+            icon: const Icon(Icons.search),
+            tooltip: 'Buscar',
+            onPressed: typed.length < 2 ? null : _searchNow,
+          ),
         ],
       ),
-      body: _query.length < 2
+      body: typed.length < 2 && _query.length < 2
           ? const EmptyView(
               icon: Icons.search,
               title: 'Buscá un producto',
-              message: 'Escribí el nombre y elegí la marca y el tamaño exactos '
-                  'que querés comprar. Si no tiene código de barras (verdura, '
-                  'pan), escribilo y elegí "Agregar sin código".',
+              message: 'Escribí el nombre, tocá la lupa y elegí la marca y el '
+                  'tamaño exactos que querés comprar. Si no tiene código de '
+                  'barras (verdura, pan), escribilo y elegí "Agregar sin código".',
             )
           : Column(
               children: [
                 // Siempre disponible, aunque falle la búsqueda en Open Food Facts.
-                _CustomItemTile(text: _query, onAdd: () => _addCustom(_query)),
-                const Divider(height: 1),
-                Expanded(child: _results()),
+                if (typed.length >= 2) ...[
+                  _CustomItemTile(text: typed, onAdd: () => _addCustom(typed)),
+                  const Divider(height: 1),
+                ],
+                Expanded(
+                  child: _query.length < 2
+                      ? EmptyView(
+                          icon: Icons.search,
+                          title: 'Tocá la lupa para buscar',
+                          message: 'Busca "$typed" en Open Food Facts.',
+                        )
+                      : _results(),
+                ),
               ],
             ),
     );

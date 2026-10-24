@@ -15,8 +15,17 @@ http.Response _json(Object body, [int status = 200]) {
   );
 }
 
-ProductRepository _repo(MockClientHandler handler, {String? countryTag = 'argentina'}) {
-  return ProductRepository(client: MockClient(handler), countryTag: countryTag);
+/// Por defecto usa solo el buscador clásico; los tests de Search-a-licious lo piden aparte.
+ProductRepository _repo(
+  MockClientHandler handler, {
+  String? countryTag = 'argentina',
+  bool modern = false,
+}) {
+  return ProductRepository(
+    client: MockClient(handler),
+    countryTag: countryTag,
+    useSearchALicious: modern,
+  );
 }
 
 void main() {
@@ -117,6 +126,116 @@ void main() {
     test('fallo de conexión -> NetworkException', () async {
       final repo = _repo((_) async => throw http.ClientException('boom'));
       expect(repo.searchByName('leche'), throwsA(isA<NetworkException>()));
+    });
+  });
+
+  group('searchByName con Search-a-licious', () {
+    const hit = {
+      'code': '7790001000011',
+      'product_name': {'es': 'Leche entera', 'en': 'Whole milk'},
+      'brands': ['La Serenísima', 'Otra'],
+      'quantity': '1 l',
+      'image_front_small_url': 'https://img.example/leche.jpg',
+    };
+
+    test('consulta search.openfoodfacts.org con el filtro de país y aplana los datos',
+        () async {
+      late http.Request captured;
+      final repo = _repo((request) async {
+        captured = request;
+        return _json({'hits': [hit], 'count': 1});
+      }, modern: true);
+
+      final results = await repo.searchByName('leche');
+
+      expect(captured.url.host, 'search.openfoodfacts.org');
+      expect(captured.url.path, '/search');
+      expect(captured.url.queryParameters['q'], contains('leche'));
+      expect(captured.url.queryParameters['q'], contains('countries_tags:"en:argentina"'));
+      expect(captured.headers['User-Agent'], contains('SuperCheck'));
+      final p = results.single;
+      expect(p.name, 'Leche entera');
+      expect(p.brand, 'La Serenísima');
+      expect(p.netQuantity, const NetQuantity(1000, QuantityUnit.milliliter));
+    });
+
+    test('sin resultados en el país, repite sin filtro (en el mismo buscador)', () async {
+      final queries = <String>[];
+      final repo = _repo((request) async {
+        queries.add(request.url.queryParameters['q']!);
+        return queries.length == 1
+            ? _json({'hits': <Object>[]})
+            : _json({'hits': [hit]});
+      }, modern: true);
+
+      final results = await repo.searchByName('leche');
+
+      expect(queries, hasLength(2));
+      expect(queries.first, contains('countries_tags'));
+      expect(queries.last, isNot(contains('countries_tags')));
+      expect(results, hasLength(1));
+    });
+
+    test('quita los caracteres de la sintaxis de consulta', () async {
+      late String q;
+      final repo = _repo((request) async {
+        q = request.url.queryParameters['q']!;
+        return _json({'hits': [hit]});
+      }, modern: true, countryTag: null);
+
+      await repo.searchByName('leche "entera": (1l)');
+
+      expect(q, isNot(contains('"')));
+      expect(q, isNot(contains(':')));
+      expect(q, isNot(contains('(')));
+      expect(q, contains('leche'));
+    });
+
+    test('si el buscador responde 503, usa el clásico', () async {
+      final hosts = <String>[];
+      final repo = _repo((request) async {
+        hosts.add(request.url.host);
+        if (request.url.host == 'search.openfoodfacts.org') {
+          return http.Response('', 503);
+        }
+        return _json({
+          'products': [
+            {'code': '1', 'product_name': 'Leche clásica'},
+          ],
+        });
+      }, modern: true);
+
+      final results = await repo.searchByName('leche');
+
+      expect(hosts, ['search.openfoodfacts.org', 'world.openfoodfacts.org']);
+      expect(results.single.name, 'Leche clásica');
+    });
+
+    test('si la respuesta no tiene "hits", usa el clásico', () async {
+      final repo = _repo((request) async {
+        if (request.url.host == 'search.openfoodfacts.org') {
+          return _json({'algo': 'raro'});
+        }
+        return _json({
+          'products': [
+            {'code': '1', 'product_name': 'Leche clásica'},
+          ],
+        });
+      }, modern: true);
+
+      expect((await repo.searchByName('leche')).single.name, 'Leche clásica');
+    });
+
+    test('si fallan los dos, el error mostrado explica el 503', () async {
+      final repo = _repo((_) async => http.Response('', 503), modern: true);
+      await expectLater(
+        repo.searchByName('leche'),
+        throwsA(
+          isA<RemoteServiceException>()
+              .having((e) => e.statusCode, 'statusCode', 503)
+              .having((e) => e.message, 'message', contains('saturado')),
+        ),
+      );
     });
   });
 
