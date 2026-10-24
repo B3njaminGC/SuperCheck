@@ -386,7 +386,14 @@ void main() {
     await settle(tester);
     await tester.tap(find.text('Enviar copia de la lista'));
     await settle(tester);
-    expect(sharer.sent, hasLength(1));
+    final avisos = find.descendant(of: find.byType(SnackBar), matching: find.byType(Text));
+    expect(
+      sharer.sent,
+      hasLength(1),
+      reason: avisos.evaluate().isEmpty
+          ? 'sin aviso en pantalla'
+          : 'aviso: ${tester.widgetList<Text>(avisos).map((t) => t.data).join(' | ')}',
+    );
     expect(sharer.sent.single, contains('• Pan'));
     expect(sharer.sent.single, contains('SC1:'));
 
