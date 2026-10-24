@@ -101,6 +101,8 @@ class ListDetailPage extends ConsumerWidget {
                 _reuse(context, ref, list);
               case 'reopen':
                 _reopen(context, ref);
+              case 'share':
+                shareListCopy(context, ref, list);
               case 'members':
                 _members(context, ref, list);
               case 'delete':
@@ -109,6 +111,7 @@ class ListDetailPage extends ConsumerWidget {
           },
           itemBuilder: (_) => [
             const PopupMenuItem(value: 'reuse', child: Text('Reutilizar esta lista')),
+            const PopupMenuItem(value: 'share', child: Text('Enviar copia de la lista')),
             const PopupMenuItem(value: 'reopen', child: Text('Reabrir lista')),
             if (!isLocal)
               const PopupMenuItem(value: 'members', child: Text('Miembros')),
@@ -136,6 +139,8 @@ class ListDetailPage extends ConsumerWidget {
                 code: list.inviteCode,
                 listName: list.name,
               );
+            case 'share':
+              shareListCopy(context, ref, list);
             case 'members':
               _members(context, ref, list);
             case 'rename':
@@ -147,6 +152,7 @@ class ListDetailPage extends ConsumerWidget {
           }
         },
         itemBuilder: (_) => [
+          const PopupMenuItem(value: 'share', child: Text('Enviar copia de la lista')),
           if (!isLocal)
             const PopupMenuItem(value: 'invite', child: Text('Invitar con código')),
           if (!isLocal)

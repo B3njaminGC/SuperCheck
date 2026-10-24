@@ -7,6 +7,7 @@ import '../../../shared/widgets/snackbars.dart';
 import '../../../shared/widgets/text_prompt_dialog.dart';
 import '../../auth/presentation/auth_providers.dart';
 import 'history_page.dart';
+import 'import_list_page.dart';
 import 'list_detail_page.dart';
 import 'lists_page.dart';
 import 'lists_providers.dart';
@@ -43,6 +44,14 @@ class _HomePageState extends ConsumerState<HomePage> {
     } on AppException catch (e) {
       if (mounted) showMessage(context, e.message);
     }
+  }
+
+  /// Recibir una lista enviada por otra persona (se pega el mensaje).
+  Future<void> _importList() async {
+    final listId = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => const ImportListPage()),
+    );
+    if (listId != null && mounted) _open(listId);
   }
 
   Future<void> _joinList() async {
@@ -89,6 +98,12 @@ class _HomePageState extends ConsumerState<HomePage> {
       appBar: AppBar(
         title: Text(_index == 0 ? 'Mis listas' : 'Historial'),
         actions: [
+          if (_index == 0)
+            IconButton(
+              icon: const Icon(Icons.file_download_outlined),
+              tooltip: 'Importar lista',
+              onPressed: _importList,
+            ),
           if (_index == 0 && !isLocal)
             IconButton(
               icon: const Icon(Icons.group_add_outlined),

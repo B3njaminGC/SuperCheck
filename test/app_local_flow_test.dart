@@ -373,4 +373,66 @@ void main() {
 
     await closeApp(tester);
   });
+
+  testWidgets('enviar una copia de la lista y recibirla pegando el mensaje',
+      (tester) async {
+    final sharer = FakeListSharer();
+    await pumpApp(tester, prefs, listSharer: sharer);
+    await createListViaUi(tester, 'Compras del mes');
+    await addFreeTextItemViaUi(tester, 'pan');
+
+    // Enviar: el menú de la lista abre el menú de compartir con el mensaje.
+    await tester.tap(find.byType(PopupMenuButton<String>));
+    await settle(tester);
+    await tester.tap(find.text('Enviar copia de la lista'));
+    await settle(tester);
+    expect(sharer.sent, hasLength(1));
+    expect(sharer.sent.single, contains('• Pan'));
+    expect(sharer.sent.single, contains('SC1:'));
+
+    // Recibir: desde Mis listas se importa pegando el mensaje.
+    tester.state<NavigatorState>(find.byType(Navigator)).pop();
+    await settle(tester);
+    await tester.tap(find.byTooltip('Importar lista'));
+    await settle(tester);
+    expect(find.text('Importar lista'), findsWidgets);
+
+    await tester.enterText(find.byType(TextField), 'Hola, esta es la lista:\n${sharer.sent.single}');
+    await settle(tester, frames: 2);
+    expect(find.text('1 producto'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Importar lista'));
+    await settle(tester);
+
+    // En el mismo teléfono ya existe: pregunta qué hacer.
+    expect(find.text('Ya tenés esta lista'), findsOneWidget);
+    await tester.tap(find.text('Crear otra copia'));
+    await settle(tester);
+
+    // Se abre la copia nueva con el producto.
+    expect(find.text('Pan'), findsOneWidget);
+    tester.state<NavigatorState>(find.byType(Navigator)).pop();
+    await settle(tester);
+    expect(find.text('Compras del mes'), findsNWidgets(2));
+
+    await closeApp(tester);
+  });
+
+  testWidgets('importar con un texto que no es una lista avisa y no deja importar',
+      (tester) async {
+    await pumpApp(tester, prefs);
+    await tester.tap(find.byTooltip('Importar lista'));
+    await settle(tester);
+
+    await tester.enterText(find.byType(TextField), 'esto no es una lista');
+    await settle(tester, frames: 2);
+
+    expect(find.textContaining('No encontré una lista'), findsOneWidget);
+    final button = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Importar lista'),
+    );
+    expect(button.onPressed, isNull);
+
+    await closeApp(tester);
+  });
 }

@@ -12,6 +12,7 @@ import 'package:supercheck/features/products/data/product_photo_picker.dart';
 import 'package:supercheck/features/products/data/product_repository.dart';
 import 'package:supercheck/features/products/presentation/my_products_controller.dart';
 import 'package:supercheck/features/products/presentation/product_providers.dart';
+import 'package:supercheck/features/shopping_list/presentation/list_transfer.dart';
 
 /// Abre la app como la ve quien la instala: sin servidor configurado y con las listas
 /// guardadas en el teléfono. La búsqueda de Open Food Facts responde "sin resultados".
@@ -20,6 +21,7 @@ Future<void> pumpApp(
   SharedPreferences prefs, {
   MockClientHandler? offHandler,
   ProductPhotoPicker? photoPicker,
+  ListSharer? listSharer,
 }) async {
   // Pantalla alta, como un teléfono: con los 600 px de alto de la prueba, las tarjetas de
   // resultados quedaban debajo del borde y no se podían tocar.
@@ -45,6 +47,7 @@ Future<void> pumpApp(
         cloudAvailableProvider.overrideWithValue(false),
         productRepositoryProvider.overrideWithValue(products),
         if (photoPicker != null) productPhotoPickerProvider.overrideWithValue(photoPicker),
+        if (listSharer != null) listSharerProvider.overrideWithValue(listSharer),
       ],
       child: const SuperCheckApp(),
     ),
@@ -95,4 +98,12 @@ Future<void> finishListViaUi(WidgetTester tester) async {
   await settle(tester);
   await tester.tap(find.widgetWithText(FilledButton, 'Finalizar'));
   await settle(tester);
+}
+
+/// Reemplaza el menú de compartir del teléfono: guarda lo que se enviaría.
+class FakeListSharer implements ListSharer {
+  final sent = <String>[];
+
+  @override
+  Future<void> share(String text, {String? subject}) async => sent.add(text);
 }

@@ -7,6 +7,7 @@ import '../../../shared/widgets/confirm_dialog.dart';
 import '../../../shared/widgets/snackbars.dart';
 import '../../../shared/widgets/text_prompt_dialog.dart';
 import '../domain/shopping_list.dart';
+import 'list_transfer.dart';
 import 'lists_providers.dart';
 
 /// Pide el nombre y crea una copia de [list] con los mismos productos, sin tachar.
@@ -107,5 +108,29 @@ Future<bool> confirmAndLeaveList(
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(e.message)));
     return false;
+  }
+}
+
+/// Abre el menú de compartir del teléfono con una copia de [list] (sin cuentas): quien
+/// la recibe la importa pegando el mensaje.
+Future<void> shareListCopy(
+  BuildContext context,
+  WidgetRef ref,
+  ShoppingList list,
+) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final transfer = ref.read(listTransferProvider);
+  try {
+    await transfer.send(list);
+  } on AppException catch (e) {
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(e.message)));
+  } catch (_) {
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(content: Text('No se pudo abrir el menú de compartir.')),
+      );
   }
 }
