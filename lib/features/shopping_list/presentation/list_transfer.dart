@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
@@ -43,8 +45,22 @@ class ListTransfer {
 
   /// Lee la lista tal como está ahora (sin avance del carrito).
   Future<SharedList> snapshot(ShoppingList list) async {
-    final items =
-        await _ref.read(shoppingListRepositoryProvider).watchItems(list.id).first;
+    final repo = _ref.read(shoppingListRepositoryProvider);
+    debugPrint('DBG repo ${repo.runtimeType} ${identityHashCode(repo)}');
+    final completer = Completer<List<ShoppingItem>>();
+    final sub = repo.watchItems(list.id).listen(
+      (v) {
+        debugPrint('DBG event ${v.length}');
+        if (!completer.isCompleted) completer.complete(v);
+      },
+      onError: (Object e) {
+        debugPrint('DBG streamerr $e');
+        if (!completer.isCompleted) completer.completeError(e);
+      },
+      onDone: () => debugPrint('DBG done'),
+    );
+    final items = await completer.future;
+    await sub.cancel();
     return SharedList(
       sourceId: list.id,
       name: list.name,
