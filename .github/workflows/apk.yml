@@ -43,6 +43,7 @@ jobs:
           # `flutter create` puede añadir un test de ejemplo que no corresponde a esta app.
           rm -f test/widget_test.dart
           python3 tools/patch_android_manifest.py android/app/src/main/AndroidManifest.xml
+          python3 tools/patch_android_gradle.py android/app
 
       - name: Dependencias
         run: flutter pub get
@@ -68,6 +69,16 @@ jobs:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
 
       # Si la firma no es la llave fija, el APK no se publica: no se podría actualizar encima.
+      # Con el código ofuscado la cámara no arranca: si vuelve a pasar, no se publica.
+      - name: Comprobar que el código no esté ofuscado
+        run: |
+          cp build/app/outputs/flutter-apk/app-release.apk /tmp/check.apk
+          if ! unzip -p /tmp/check.apk 'classes*.dex' | strings -n 6 | grep -q "dev/steenbakker/mobile_scanner/MobileScanner"; then
+            echo "::error title=Código ofuscado::las clases del escáner aparecen renombradas (R8 sigue activo)"
+            exit 1
+          fi
+          echo "Código sin ofuscar: ok"
+
       - name: Comprobar la firma
         run: |
           cp build/app/outputs/flutter-apk/app-release.apk SuperCheck.apk
