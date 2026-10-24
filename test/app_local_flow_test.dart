@@ -204,6 +204,7 @@ void main() {
     await tester.tap(find.text('Agregar producto'));
     await settle(tester);
     await tester.enterText(find.byType(TextField), 'leche');
+    await settle(tester, frames: 2); // la lupa se habilita al reconstruirse la pantalla
     await tester.tap(find.byTooltip('Buscar'));
     await settle(tester);
 
