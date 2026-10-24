@@ -239,6 +239,79 @@ void main() {
     });
   });
 
+  group('búsquedas con artículos y sin resultados', () {
+    test('no manda "las" al buscar "azúcar impalpable las dos anclas"', () async {
+      late String q;
+      final repo = _repo((request) async {
+        q = request.url.queryParameters['q']!;
+        return _json({
+          'hits': [
+            {
+              'code': '7782900990620',
+              'product_name': 'Azúcar impalpable',
+              'brands': 'Dos Anclas',
+              'quantity': '300 g',
+            },
+          ],
+        });
+      }, modern: true, countryTag: null);
+
+      final results = await repo.searchByName('azúcar impalpable las dos anclas');
+
+      expect(q, 'azúcar impalpable dos anclas');
+      expect(results.single.brand, 'Dos Anclas');
+    });
+
+    test('el buscador clásico también recibe el texto sin artículos', () async {
+      late String terms;
+      final repo = _repo((request) async {
+        terms = request.url.queryParameters['search_terms']!;
+        return _json({'products': <Object>[]});
+      }, countryTag: null);
+
+      await repo.searchByName('leche de la vaca');
+
+      expect(terms, 'leche vaca');
+    });
+
+    test('si el buscador moderno no encuentra nada, prueba el clásico', () async {
+      final repo = _repo((request) async {
+        if (request.url.host == 'search.openfoodfacts.org') {
+          return _json({'hits': <Object>[]});
+        }
+        return _json({
+          'products': [
+            {'code': '1', 'product_name': 'Del clásico'},
+          ],
+        });
+      }, modern: true, countryTag: null);
+
+      expect((await repo.searchByName('algo raro')).single.name, 'Del clásico');
+    });
+
+    test('si el moderno no encuentra nada y el clásico falla, devuelve vacío', () async {
+      final repo = _repo((request) async {
+        return request.url.host == 'search.openfoodfacts.org'
+            ? _json({'hits': <Object>[]})
+            : http.Response('', 503);
+      }, modern: true, countryTag: null);
+
+      expect(await repo.searchByName('algo raro'), isEmpty);
+    });
+
+    test('si todas las palabras son conectores usa el texto original', () async {
+      late String terms;
+      final repo = _repo((request) async {
+        terms = request.url.queryParameters['search_terms']!;
+        return _json({'products': <Object>[]});
+      }, countryTag: null);
+
+      await repo.searchByName('la de');
+
+      expect(terms, 'la de');
+    });
+  });
+
   group('getByBarcode', () {
     test('devuelve el producto y usa el código consultado si OFF no lo repite', () async {
       late http.Request captured;

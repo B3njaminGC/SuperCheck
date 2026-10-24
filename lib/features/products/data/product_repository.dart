@@ -56,17 +56,41 @@ class ProductRepository {
     int page = 1,
     int pageSize = 20,
   }) async {
-    final term = query.trim();
-    if (term.length < 2) return const [];
+    final typed = query.trim();
+    if (typed.length < 2) return const [];
+    final term = _withoutFillerWords(typed);
 
     if (_useSearchALicious) {
       try {
-        return await _searchModern(term, page: page, pageSize: pageSize);
+        final results = await _searchModern(term, page: page, pageSize: pageSize);
+        if (results.isNotEmpty || page > 1) return results;
+        // Sin resultados: se prueba también el buscador clásico, que indexa distinto.
+        try {
+          return await _searchLegacy(term, page: page, pageSize: pageSize);
+        } on AppException {
+          return results;
+        }
       } on AppException {
         // Cae al buscador clásico: mejor uno limitado que ninguno.
       }
     }
     return _searchLegacy(term, page: page, pageSize: pageSize);
+  }
+
+  static const _fillerWords = {
+    'el', 'la', 'las', 'los', 'lo', 'de', 'del', 'y', 'e', 'un', 'una', 'unos',
+    'unas', 'en', 'al', 'con', 'para',
+  };
+
+  /// Los buscadores exigen que aparezcan todas las palabras: "azúcar impalpable las dos
+  /// anclas" no encontraba "Dos Anclas" por culpa del "las". Se sacan artículos y
+  /// conectores; si no queda nada, se usa el texto tal cual.
+  static String _withoutFillerWords(String text) {
+    final kept = text
+        .split(RegExp(r'\s+'))
+        .where((w) => w.isNotEmpty && !_fillerWords.contains(w.toLowerCase()))
+        .toList();
+    return kept.isEmpty ? text : kept.join(' ');
   }
 
   Future<List<Product>> _searchLegacy(
