@@ -68,7 +68,8 @@ jobs:
       - name: Huella de la firma
         run: |
           cp build/app/outputs/flutter-apk/app-release.apk SuperCheck.apk
-          $ANDROID_HOME/build-tools/*/apksigner verify --print-certs SuperCheck.apk | grep -i "SHA-256" | head -1
+          fp=$($ANDROID_HOME/build-tools/*/apksigner verify --print-certs SuperCheck.apk | grep -i "SHA-256" | head -1)
+          echo "::notice title=Huella de la firma::$fp"
           ls -l SuperCheck.apk
 
       - uses: actions/upload-artifact@v4

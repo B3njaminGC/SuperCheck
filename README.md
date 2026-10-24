@@ -1,10 +1,50 @@
 # SuperCheck
 
-Lista de supermercado compartida en tiempo real, con cuenta, historial de listas reutilizables y
-verificador de productos por código de barras.
+Lista de supermercado con historial de listas reutilizables y verificador de productos por código
+de barras. Funciona **sin cuenta y sin internet para las listas** (se guardan en el teléfono); si
+querés compartirlas con la familia en tiempo real, se puede activar una cuenta (opcional y gratis).
+
+## Instalar en el celular Android (lo más fácil)
+
+1. Desde el celular, entrá a la página de descargas del proyecto, iniciando sesión en GitHub:
+   <https://github.com/B3njaminGC/SuperCheck/releases>
+2. En la versión más nueva tocá **SuperCheck.apk** para descargarlo.
+3. Abrí el archivo descargado. Android va a avisar que bloquea instalar apps de esta fuente: tocá
+   **Configuración** y activá **Permitir de esta fuente** (solo para el navegador o gestor de archivos
+   que usaste). Volvé y tocá **Instalar**. Si Play Protect avisa de una app "no verificada", tocá
+   *Instalar de todos modos*: es normal en apps que no vienen de la tienda.
+4. Abrí SuperCheck. Entra directo a tus listas: no pide cuenta ni configuración.
+5. Para actualizar, descargá el APK nuevo e instalalo **encima**: las listas se conservan (la app se
+   firma siempre con la misma llave). No la desinstales antes: borraría las listas del teléfono.
+
+La primera vez que escanees, Android pide permiso para usar la cámara.
+
+## Cómo sacar un APK nuevo
+
+En GitHub: pestaña **Actions** → **APK de Android** → **Run workflow**. Tarda unos 10 minutos y deja
+el archivo en **Releases**. Cada versión suma un número, así Android acepta instalarla encima de la anterior.
+
+## Cuentas y compartir en vivo (opcional)
+
+Sin esto la app ya funciona completa para una persona. Para compartir listas con la familia:
+
+1. Crear un proyecto gratis en <https://supabase.com> (plan Free, sin tarjeta).
+2. *SQL Editor*: ejecutar **en orden** los cuatro archivos de `supabase/migrations/`.
+3. *Authentication → Providers*: Email habilitado. Para probar rápido, desactivá *Confirm email*.
+4. En GitHub: *Settings → Secrets and variables → Actions → New repository secret*, crear
+   `SUPABASE_URL` (la URL del proyecto) y `SUPABASE_ANON_KEY` (la clave pública/publishable).
+5. Sacar un APK nuevo (sección anterior). Desde ese momento el login muestra además "Seguir sin
+   cuenta", y el menú de la app permite pasar a la cuenta.
+
+Aviso del plan Free de Supabase: pausa el proyecto tras una semana sin uso (se reactiva desde su
+panel con un clic) y no incluye copias de seguridad.
+
+Las listas del teléfono y las de la cuenta son **independientes**: no se pasan de un modo al otro.
 
 ## Qué hace
 
+- **Sin cuenta**: las listas se guardan en el teléfono. Se pueden **borrar** desde la pestaña
+  Listas (menú de cada una) y desde el Historial, con confirmación.
 - **Cuenta**: registro e inicio de sesión con email y contraseña (Supabase Auth). Si la sesión se
   pierde, la app vuelve sola al login.
 - **Listas compartidas**: se crean con un código de invitación de 8 caracteres; la familia se une con
@@ -36,6 +76,9 @@ supercheck/
 ├── pubspec.yaml
 ├── analysis_options.yaml
 ├── .github/workflows/ci.yml           # flutter analyze + flutter test en cada push
+├── .github/workflows/apk.yml          # arma el APK y lo publica en Releases
+├── android-signing/debug.keystore     # llave de firma fija (repositorio privado)
+├── tools/patch_android_manifest.py    # permisos de internet y cámara para Android
 ├── supabase/migrations/               # ejecutar en orden
 │   ├── 0001_init.sql                  # tablas, RLS, invitaciones, realtime
 │   ├── 0002_history.sql               # estado de lista, finalizar/reabrir/reutilizar
@@ -43,7 +86,7 @@ supercheck/
 │   └── 0004_leave_lists.sql           # salir de una lista / sacar miembros
 ├── lib/
 │   ├── main.dart  app.dart            # init + AuthGate (login o inicio)
-│   ├── core/                          # config, errores, red, utilidades
+│   ├── core/                          # config, modo (sin cuenta / cuenta), errores, red
 │   ├── features/
 │   │   ├── auth/                      # AuthRepository, LoginPage, sesión
 │   │   ├── family/                    # ListMember, hoja de miembros, diálogo de invitación
@@ -53,38 +96,18 @@ supercheck/
 │   │   │   └── presentation/          # cámara, controlador y banner de resultados
 │   │   └── shopping_list/
 │   │       ├── domain/                # ShoppingList, ShoppingItem
-│   │       ├── data/                  # repositorio Supabase
+│   │       ├── data/                  # repositorio local (teléfono) y Supabase
 │   │       └── presentation/          # inicio, listas, historial, detalle, controladores
 │   └── shared/widgets/
 └── test/                              # barcode, cantidades, repositorio OFF, ítems, verificador
 ```
 
-## Puesta en marcha
+## Desarrollo
 
-1. Crear el proyecto base y copiar estos archivos encima:
-   ```
-   flutter create supercheck --org com.tuorg
-   # copiá lib/, test/, supabase/, pubspec.yaml y analysis_options.yaml de esta carpeta
-   cd supercheck && flutter pub get
-   ```
-2. En Supabase (plan Free), *SQL Editor*: ejecutar **en orden** los cuatro archivos de
-   `supabase/migrations/`.
-3. *Authentication → Providers*: Email habilitado. Para probar rápido, desactivá *Confirm email*
-   (si no, el registro pide confirmar el mail antes de entrar).
-4. Permisos de cámara (los archivos de plataforma los genera `flutter create`):
-   - **Android** `android/app/src/main/AndroidManifest.xml`:
-     `<uses-permission android:name="android.permission.CAMERA"/>` y en
-     `android/app/build.gradle` `minSdkVersion 23` (o superior).
-   - **iOS** `ios/Runner/Info.plist`: clave `NSCameraUsageDescription` con un texto como
-     "Usamos la cámara para escanear códigos de barras".
-5. Editá `offUserAgent` en `lib/core/constants/app_constants.dart` con un mail de contacto real.
-6. Ejecutar:
-   ```
-   flutter run \
-     --dart-define=SUPABASE_URL=https://TU-PROYECTO.supabase.co \
-     --dart-define=SUPABASE_ANON_KEY=TU_ANON_KEY
-   ```
-7. Tests: `flutter test`
+Con el SDK de Flutter instalado: `flutter create --platforms=android .`, `flutter pub get`,
+`flutter test` y `flutter run` (con `--dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...`
+si querés probar la cuenta). Editá `offUserAgent` en `lib/core/constants/app_constants.dart` con un mail
+de contacto real.
 
 ## Notas de diseño
 
@@ -105,14 +128,9 @@ supercheck/
   etiquetas pero no hace texto libre), priorizando productos de Argentina con fallback mundial.
 - **Códigos de barras**: se comparan normalizados (sin ceros a la izquierda) para que UPC-A y EAN-13 coincidan.
 
-## Sin verificar y pendientes
+## Pendientes
 
-- **Nada de esto se compiló ni se corrió todavía** (el entorno donde se escribió no tiene el SDK de
-  Flutter). Lo primero: `flutter pub get`, `flutter analyze` y `flutter test`, o subirlo a GitHub y
-  mirar el resultado del CI. La parte más probable de necesitar ajustes es `scanner_page.dart`, porque
-  la API de `mobile_scanner` cambia entre versiones. `flutter analyze` falla también por avisos de nivel
-  "info": si el CI sale rojo solo por estilo, cambiá el paso a `flutter analyze --no-fatal-infos`.
+- El escáner con la cámara real y el uso en la góndola solo se pueden probar en un teléfono: los tests
+  automáticos cubren la lógica de comparación, las listas y los recorridos de pantalla.
+- Pasar listas del teléfono a la cuenta (hoy son independientes).
 - Riverpod 2.x: si actualizás a Riverpod 3 hay que migrar los notifiers.
-- Sin modo offline: Hive está en el `pubspec` pero aún no se usa.
-- Los ítems de texto libre solo se emparejan con el escáner si el nombre coincide casi exacto con el
-  producto escaneado (sin marca se exige un solapamiento alto).
