@@ -54,7 +54,7 @@ void main() {
 
       expect(captured.url.host, 'world.openfoodfacts.org');
       expect(captured.url.path, '/cgi/search.pl');
-      expect(captured.url.queryParameters['search_terms'], 'galletitas de agua');
+      expect(captured.url.queryParameters['search_terms'], 'galletitas agua');
       expect(captured.url.queryParameters['tag_0'], 'argentina');
       expect(captured.headers['User-Agent'], contains('SuperCheck'));
 
