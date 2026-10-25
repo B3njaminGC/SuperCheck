@@ -36,7 +36,7 @@ jobs:
           KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
           if [ -z "$KS_B64" ] || [ -z "$KS_PASS" ]; then
-            echo "::error title=Falta la llave de firma::creá los secretos ANDROID_KEYSTORE_BASE64 y ANDROID_KEYSTORE_PASSWORD (ver la sección Firma del APK en el README)"
+            echo "::error title=Falta la llave de firma::creá los secretos ANDROID_KEYSTORE_BASE64 y ANDROID_KEYSTORE_PASSWORD"
             exit 1
           fi
           mkdir -p ~/.gradle/init.d
