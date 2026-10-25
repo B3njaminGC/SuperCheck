@@ -63,6 +63,13 @@ Future<void> settle(WidgetTester tester, {int frames = 12}) async {
   }
 }
 
+/// Deja correr un instante de tiempo real: las acciones que leen las listas "una vez"
+/// (enviar, importar) esperan un stream y no avanzan solo con `pump`.
+Future<void> realWait(WidgetTester tester) async {
+  await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
+  await settle(tester);
+}
+
 /// Cierra la app y libera todo lo que tenía pendiente.
 Future<void> closeApp(WidgetTester tester) async {
   await tester.pumpWidget(const SizedBox.shrink());

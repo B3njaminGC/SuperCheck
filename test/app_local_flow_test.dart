@@ -385,9 +385,7 @@ void main() {
     await tester.tap(find.byType(PopupMenuButton<String>));
     await settle(tester);
     await tester.tap(find.text('Enviar copia de la lista'));
-    // Leer la lista usa un stream; se deja correr el tiempo real un instante.
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
-    await settle(tester);
+    await realWait(tester);
     final avisos = find.descendant(of: find.byType(SnackBar), matching: find.byType(Text));
     expect(
       sharer.sent,
@@ -411,12 +409,12 @@ void main() {
     expect(find.text('1 producto'), findsOneWidget);
 
     await tester.tap(find.widgetWithText(FilledButton, 'Importar lista'));
-    await settle(tester);
+    await realWait(tester);
 
     // En el mismo teléfono ya existe: pregunta qué hacer.
     expect(find.text('Ya tenés esta lista'), findsOneWidget);
     await tester.tap(find.text('Crear otra copia'));
-    await settle(tester);
+    await realWait(tester);
 
     // Se abre la copia nueva con el producto.
     expect(find.text('Pan'), findsOneWidget);
