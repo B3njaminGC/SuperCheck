@@ -43,6 +43,16 @@ Las listas del teléfono y las de la cuenta son **independientes**: no se pasan 
 
 ## Qué hace
 
+- **Crear producto**: si algo no está en Open Food Facts (o querés tu propia foto), se crea con
+  nombre, marca, tamaño, código de barras opcional y foto (cámara o galería). Queda en **Mis
+  productos**, aparece al buscar y el escáner lo reconoce por su código.
+- **Favoritos**: la estrella de cada tarjeta guarda el producto. Antes de escribir se ven tus
+  favoritos, y al buscar salen primero ellos y los productos de sus marcas (marcadas con ★).
+- **Enviar una copia de la lista (sin cuenta)**: menú de la lista → *Enviar copia de la lista*
+  abre el menú de compartir (WhatsApp, etc.) con la lista en texto y un código `SC1:`. Quien la
+  recibe copia el mensaje y, en *Mis listas*, toca el ícono de importar y pega. Es una **copia**, no
+  una lista en vivo: para editar juntos en tiempo real hace falta la cuenta opcional. Si la lista ya
+  estaba, se elige entre reemplazarla o crear otra copia. Las fotos propias no viajan.
 - **Sin cuenta**: las listas se guardan en el teléfono. Se pueden **borrar** desde la pestaña
   Listas (menú de cada una) y desde el Historial, con confirmación.
 - **Cuenta**: registro e inicio de sesión con email y contraseña (Supabase Auth). Si la sesión se
