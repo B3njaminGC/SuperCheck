@@ -1,0 +1,11 @@
+name: Sugerencia
+description: Una idea para mejorar SuperCheck
+labels: ["sugerencia"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: ¿Qué te gustaría que hiciera la app?
+      description: Contanos la situación en la que la usarías.
+    validations:
+      required: true

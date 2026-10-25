@@ -26,6 +26,15 @@ Gratis, para Android y sin necesidad de crear una cuenta.
 En GitHub: pestaña **Actions** → **APK de Android** → **Run workflow**. Tarda unos 10 minutos y deja el archivo
 en **Releases** (hacen falta los secretos de firma, ver *Firma del APK*).
 
+## Opiniones y errores
+
+¿Algo no anda o tenés una idea? Contalo en este
+[formulario](https://docs.google.com/forms/d/e/1FAIpQLSfiamKhFf6ihGTKJTh6bf4VJarRt_sqiqk5viALKzsQwnfYog/viewform)
+(no hace falta cuenta) o abrí un [issue](https://github.com/B3njaminGC/SuperCheck/issues/new/choose).
+También está en la app: ícono **?** → *Opinar o reportar un error*.
+
+Cuando sale una versión nueva, la app avisa al abrirse con un botón **Actualizar**.
+
 ## Cuentas y compartir en vivo (opcional)
 
 Sin esto la app ya funciona completa para una persona. Para compartir listas con la familia:

@@ -7,6 +7,7 @@ import '../../../shared/widgets/snackbars.dart';
 import '../../../shared/widgets/text_prompt_dialog.dart';
 import '../../auth/presentation/auth_providers.dart';
 import '../../onboarding/presentation/help_page.dart';
+import '../../update/update_banner.dart';
 import 'history_page.dart';
 import 'import_list_page.dart';
 import 'list_detail_page.dart';
@@ -160,9 +161,16 @@ class _HomePageState extends ConsumerState<HomePage> {
           ),
         ],
       ),
-      body: _index == 0
-          ? ListsPage(onOpen: _open)
-          : HistoryPage(onOpen: _open),
+      body: Column(
+        children: [
+          const UpdateBanner(),
+          Expanded(
+            child: _index == 0
+                ? ListsPage(onOpen: _open)
+                : HistoryPage(onOpen: _open),
+          ),
+        ],
+      ),
       floatingActionButton: _index == 0
           ? FloatingActionButton.extended(
               onPressed: _createList,

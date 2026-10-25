@@ -8,6 +8,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:supercheck/features/products/data/product_photo_picker.dart';
 
+import 'package:supercheck/features/update/update_checker.dart';
+
 import 'helpers/app_harness.dart';
 
 /// Cámara de mentira: "saca" siempre la misma foto.
@@ -524,6 +526,44 @@ void main() {
     await settle(tester);
     expect(find.text('¿Qué es SuperCheck?'), findsOneWidget);
 
+    await closeApp(tester);
+  });
+
+  testWidgets('avisa si hay una versión nueva y el botón abre la descarga', (tester) async {
+    final opener = FakeUrlOpener();
+    final url = Uri.parse('https://github.com/B3njaminGC/SuperCheck/releases/download/app-99/SuperCheck.apk');
+    await pumpApp(tester, prefs, newVersion: UpdateInfo(build: 99, url: url), urlOpener: opener);
+
+    expect(find.text('Nueva versión disponible'), findsOneWidget);
+    await tester.tap(find.text('Actualizar'));
+    await settle(tester);
+    expect(opener.opened, [url]);
+
+    await tester.tap(find.text('Más tarde'));
+    await settle(tester);
+    expect(find.text('Nueva versión disponible'), findsNothing);
+    await closeApp(tester);
+  });
+
+  testWidgets('sin versión nueva no aparece el aviso', (tester) async {
+    await pumpApp(tester, prefs);
+    expect(find.text('Nueva versión disponible'), findsNothing);
+    await closeApp(tester);
+  });
+
+  testWidgets('la ayuda tiene el botón para opinar o reportar un error', (tester) async {
+    final opener = FakeUrlOpener();
+    await pumpApp(tester, prefs, urlOpener: opener);
+    await tester.tap(find.byTooltip('Ayuda'));
+    await settle(tester);
+    await tester.scrollUntilVisible(
+      find.text('Opinar o reportar un error'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Opinar o reportar un error'));
+    await settle(tester);
+    expect(opener.opened.single.toString(), contains('docs.google.com/forms'));
     await closeApp(tester);
   });
 }

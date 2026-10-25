@@ -21,5 +21,14 @@ abstract final class AppConstants {
       'brands,quantity,product_quantity,product_quantity_unit,'
       'image_front_small_url,image_front_url,image_small_url,image_url';
 
+  // --- Proyecto ---------------------------------------------------------
+  /// Formulario para opinar o avisar de un error (no hace falta cuenta).
+  static const feedbackUrl =
+      'https://docs.google.com/forms/d/e/1FAIpQLSfiamKhFf6ihGTKJTh6bf4VJarRt_sqiqk5viALKzsQwnfYog/viewform';
+
+  /// Última versión publicada (solo responde si el repositorio es público).
+  static const latestReleaseApi =
+      'https://api.github.com/repos/B3njaminGC/SuperCheck/releases/latest';
+
   static const httpTimeout = Duration(seconds: 12);
 }

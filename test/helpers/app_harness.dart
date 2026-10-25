@@ -10,6 +10,7 @@ import 'package:supercheck/app.dart';
 import 'package:supercheck/core/mode/app_mode.dart';
 import 'package:supercheck/features/onboarding/presentation/onboarding_controller.dart';
 import 'package:supercheck/features/products/data/product_photo_picker.dart';
+import 'package:supercheck/features/update/update_checker.dart';
 import 'package:supercheck/features/products/data/product_repository.dart';
 import 'package:supercheck/features/products/presentation/my_products_controller.dart';
 import 'package:supercheck/features/products/presentation/product_providers.dart';
@@ -24,6 +25,8 @@ Future<void> pumpApp(
   ProductPhotoPicker? photoPicker,
   ListSharer? listSharer,
   bool showOnboarding = false,
+  UpdateInfo? newVersion,
+  FakeUrlOpener? urlOpener,
 }) async {
   // Pantalla alta, como un teléfono: con los 600 px de alto de la prueba, las tarjetas de
   // resultados quedaban debajo del borde y no se podían tocar.
@@ -50,6 +53,8 @@ Future<void> pumpApp(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
         cloudAvailableProvider.overrideWithValue(false),
+        updateCheckProvider.overrideWith((ref) async => newVersion),
+        urlOpenerProvider.overrideWithValue((urlOpener ?? FakeUrlOpener()).open),
         productRepositoryProvider.overrideWithValue(products),
         if (photoPicker != null) productPhotoPickerProvider.overrideWithValue(photoPicker),
         if (listSharer != null) listSharerProvider.overrideWithValue(listSharer),
@@ -119,5 +124,15 @@ class FakeListSharer implements ListSharer {
   @override
   Future<void> share(String text, {String? subject}) async {
     sent.add(text);
+  }
+}
+
+/// Reemplaza la apertura de links: guarda lo que se habría abierto.
+class FakeUrlOpener {
+  final opened = <Uri>[];
+
+  Future<bool> open(Uri url) async {
+    opened.add(url);
+    return true;
   }
 }

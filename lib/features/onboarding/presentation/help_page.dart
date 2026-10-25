@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/app_constants.dart';
+import '../../../shared/widgets/snackbars.dart';
+import '../../update/update_checker.dart';
 import '../../../shared/widgets/app_logo.dart';
 import 'onboarding_page.dart';
 
 /// Ayuda para quien no conoce la app: qué es y cómo se usa cada parte.
-class HelpPage extends StatelessWidget {
+class HelpPage extends ConsumerWidget {
   const HelpPage({super.key});
 
   static const _topics = <(String, String)>[
@@ -62,7 +66,7 @@ class HelpPage extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -117,6 +121,18 @@ class HelpPage extends StatelessWidget {
             ),
             icon: const Icon(Icons.slideshow_outlined),
             label: const Text('Ver la bienvenida otra vez'),
+          ),
+          const SizedBox(height: 8),
+          FilledButton.tonalIcon(
+            onPressed: () async {
+              final opened =
+                  await ref.read(urlOpenerProvider)(Uri.parse(AppConstants.feedbackUrl));
+              if (!opened && context.mounted) {
+                showMessage(context, 'No se pudo abrir el formulario.');
+              }
+            },
+            icon: const Icon(Icons.chat_bubble_outline),
+            label: const Text('Opinar o reportar un error'),
           ),
         ],
       ),
