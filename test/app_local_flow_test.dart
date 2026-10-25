@@ -385,8 +385,9 @@ void main() {
     await tester.tap(find.byType(PopupMenuButton<String>));
     await settle(tester);
     await tester.tap(find.text('Enviar copia de la lista'));
+    // Leer la lista usa un stream; se deja correr el tiempo real un instante.
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
     await settle(tester);
-    print('DBG test checking sent=${sharer.sent.length}');
     final avisos = find.descendant(of: find.byType(SnackBar), matching: find.byType(Text));
     expect(
       sharer.sent,

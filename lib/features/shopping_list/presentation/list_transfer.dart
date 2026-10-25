@@ -1,6 +1,3 @@
-import 'dart:async';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -45,22 +42,8 @@ class ListTransfer {
 
   /// Lee la lista tal como está ahora (sin avance del carrito).
   Future<SharedList> snapshot(ShoppingList list) async {
-    final repo = _ref.read(shoppingListRepositoryProvider);
-    print('DBG repo ${repo.runtimeType} ${identityHashCode(repo)}');
-    final completer = Completer<List<ShoppingItem>>();
-    final sub = repo.watchItems(list.id).listen(
-      (v) {
-        print('DBG event ${v.length}');
-        if (!completer.isCompleted) completer.complete(v);
-      },
-      onError: (Object e) {
-        print('DBG streamerr $e');
-        if (!completer.isCompleted) completer.completeError(e);
-      },
-      onDone: () => print('DBG done'),
-    );
-    final items = await completer.future;
-    await sub.cancel();
+    final items =
+        await _ref.read(shoppingListRepositoryProvider).watchItems(list.id).first;
     return SharedList(
       sourceId: list.id,
       name: list.name,
@@ -82,17 +65,13 @@ class ListTransfer {
 
   /// Abre el menú de compartir con el mensaje de [list].
   Future<void> send(ShoppingList list) async {
-    print('DBG send start ${list.id}');
     final shared = await snapshot(list);
-    print('DBG snapshot items=${shared.items.length}');
     if (shared.items.isEmpty) {
       throw const AppException('La lista está vacía: agregá productos antes de enviarla.');
     }
-    print('DBG before share');
     await _ref
         .read(listSharerProvider)
         .share(ListShareCodec.toMessage(shared), subject: list.name);
-    print('DBG after share');
   }
 
   /// La lista activa que ya viene de esta misma copia, si existe.
