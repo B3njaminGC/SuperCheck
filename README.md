@@ -43,6 +43,9 @@ Las listas del teléfono y las de la cuenta son **independientes**: no se pasan 
 
 ## Qué hace
 
+- **Bienvenida y ayuda**: la primera vez que se abre, cuatro pantallas cortas explican para qué sirve la
+  app (se puede saltear). El ícono **?** de la pantalla de inicio abre la ayuda con cada función explicada
+  y permite ver la bienvenida otra vez. El menú de cuenta solo aparece si hay servidor configurado.
 - **Crear producto**: si algo no está en Open Food Facts (o querés tu propia foto), se crea con
   nombre, marca, tamaño, código de barras opcional y foto (cámara o galería). Queda en **Mis
   productos**, aparece al buscar y el escáner lo reconoce por su código.
