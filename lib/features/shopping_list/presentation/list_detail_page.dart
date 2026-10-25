@@ -34,6 +34,10 @@ class ListDetailPage extends ConsumerWidget {
     // Mientras la lista no cargó se la trata como de solo lectura.
     final readOnly = list?.isCompleted ?? true;
 
+    // Cuando ya está todo tachado aparece el botón de terminar la compra.
+    final loaded = itemsAsync.valueOrNull ?? const <ShoppingItem>[];
+    final allDone = !readOnly && loaded.isNotEmpty && loaded.every((i) => i.isChecked);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(list?.name ?? 'Lista'),
@@ -61,7 +65,7 @@ class ListDetailPage extends ConsumerWidget {
                               'marca y el tamaño exactos.',
                     )
                   : ListView.builder(
-                      padding: const EdgeInsets.only(bottom: 96),
+                      padding: EdgeInsets.only(bottom: allDone ? 168 : 96),
                       itemCount: items.length,
                       itemBuilder: (_, i) => _ItemTile(
                         item: items[i],
@@ -75,14 +79,31 @@ class ListDetailPage extends ConsumerWidget {
       ),
       floatingActionButton: readOnly
           ? null
-          : FloatingActionButton.extended(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => ProductSearchPage(listId: listId),
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (allDone) ...[
+                  FloatingActionButton(
+                    heroTag: 'finish-list',
+                    tooltip: 'Terminar la compra',
+                    shape: const CircleBorder(),
+                    onPressed: () => _finish(context, ref),
+                    child: const Icon(Icons.check, size: 30),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                FloatingActionButton.extended(
+                  heroTag: 'add-product',
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => ProductSearchPage(listId: listId),
+                    ),
+                  ),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Agregar producto'),
                 ),
-              ),
-              icon: const Icon(Icons.add),
-              label: const Text('Agregar producto'),
+              ],
             ),
     );
   }
@@ -94,6 +115,12 @@ class ListDetailPage extends ConsumerWidget {
 
     if (list.isCompleted) {
       return [
+        if (isOwner)
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            tooltip: 'Borrar lista',
+            onPressed: () => _delete(context, ref, list),
+          ),
         PopupMenuButton<String>(
           onSelected: (value) {
             switch (value) {
@@ -105,8 +132,6 @@ class ListDetailPage extends ConsumerWidget {
                 shareListCopy(context, ref, list);
               case 'members':
                 _members(context, ref, list);
-              case 'delete':
-                _delete(context, ref, list);
             }
           },
           itemBuilder: (_) => [
@@ -115,8 +140,6 @@ class ListDetailPage extends ConsumerWidget {
             const PopupMenuItem(value: 'reopen', child: Text('Reabrir lista')),
             if (!isLocal)
               const PopupMenuItem(value: 'members', child: Text('Miembros')),
-            if (isOwner)
-              const PopupMenuItem(value: 'delete', child: Text('Borrar lista')),
           ],
         ),
       ];
@@ -130,6 +153,18 @@ class ListDetailPage extends ConsumerWidget {
           MaterialPageRoute<void>(builder: (_) => ScannerPage(listId: listId)),
         ),
       ),
+      IconButton(
+        icon: const Icon(Icons.share_outlined),
+        tooltip: 'Enviar copia de la lista',
+        onPressed: () => shareListCopy(context, ref, list),
+      ),
+      if (isOwner)
+        IconButton(
+          icon: const Icon(Icons.delete_outline),
+          tooltip: 'Borrar lista',
+          onPressed: () => _delete(context, ref, list),
+        ),
+      // Lo menos usado queda en el menú; lo importante tiene botón propio.
       PopupMenuButton<String>(
         onSelected: (value) {
           switch (value) {
@@ -139,20 +174,15 @@ class ListDetailPage extends ConsumerWidget {
                 code: list.inviteCode,
                 listName: list.name,
               );
-            case 'share':
-              shareListCopy(context, ref, list);
             case 'members':
               _members(context, ref, list);
             case 'rename':
               _rename(context, ref, list);
             case 'finish':
               _finish(context, ref);
-            case 'delete':
-              _delete(context, ref, list);
           }
         },
         itemBuilder: (_) => [
-          const PopupMenuItem(value: 'share', child: Text('Enviar copia de la lista')),
           if (!isLocal)
             const PopupMenuItem(value: 'invite', child: Text('Invitar con código')),
           if (!isLocal)
@@ -160,8 +190,6 @@ class ListDetailPage extends ConsumerWidget {
           if (isOwner)
             const PopupMenuItem(value: 'rename', child: Text('Renombrar lista')),
           const PopupMenuItem(value: 'finish', child: Text('Finalizar lista')),
-          if (isOwner)
-            const PopupMenuItem(value: 'delete', child: Text('Borrar lista')),
         ],
       ),
     ];

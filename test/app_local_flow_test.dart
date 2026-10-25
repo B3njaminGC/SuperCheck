@@ -64,11 +64,19 @@ void main() {
     expect(find.text('Pan'), findsOneWidget);
     expect(find.text('0 de 1 en el carrito'), findsOneWidget);
 
+    // Mientras falta algo por tachar no hay botón de terminar.
+    expect(find.byTooltip('Terminar la compra'), findsNothing);
+
     await tester.tap(find.text('Pan'));
     await settle(tester);
     expect(find.text('1 de 1 en el carrito'), findsOneWidget);
 
-    await finishListViaUi(tester);
+    // Con todo tachado aparece el botón redondo con el check.
+    expect(find.byTooltip('Terminar la compra'), findsOneWidget);
+    await tester.tap(find.byTooltip('Terminar la compra'));
+    await settle(tester);
+    await tester.tap(find.widgetWithText(FilledButton, 'Finalizar'));
+    await settle(tester);
     expect(find.text('Mis listas'), findsOneWidget);
     expect(find.text('Todavía no tenés listas'), findsOneWidget);
 
@@ -115,6 +123,19 @@ void main() {
     await settle(tester);
     expect(find.text('Compras del mes'), findsOneWidget);
 
+    await closeApp(tester);
+  });
+
+  testWidgets('el tacho de la lista abierta la borra', (tester) async {
+    await pumpApp(tester, prefs);
+    await createListViaUi(tester, 'Con tacho');
+    await tester.tap(find.byTooltip('Borrar lista'));
+    await settle(tester);
+    await tester.tap(find.widgetWithText(FilledButton, 'Borrar'));
+    await settle(tester);
+
+    expect(find.text('Mis listas'), findsOneWidget);
+    expect(find.text('Todavía no tenés listas'), findsOneWidget);
     await closeApp(tester);
   });
 
@@ -381,10 +402,8 @@ void main() {
     await createListViaUi(tester, 'Compras del mes');
     await addFreeTextItemViaUi(tester, 'pan');
 
-    // Enviar: el menú de la lista abre el menú de compartir con el mensaje.
-    await tester.tap(find.byType(PopupMenuButton<String>));
-    await settle(tester);
-    await tester.tap(find.text('Enviar copia de la lista'));
+    // Enviar: el botón de la lista abre el menú de compartir con el mensaje.
+    await tester.tap(find.byTooltip('Enviar copia de la lista'));
     await realWait(tester);
     final avisos = find.descendant(of: find.byType(SnackBar), matching: find.byType(Text));
     expect(
