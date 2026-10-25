@@ -15,3 +15,7 @@ coverage/
 # Secretos locales (usá --dart-define-from-file con uno de estos)
 env.json
 *.env
+
+# Llaves de firma: nunca al repositorio (van como secretos de GitHub)
+*.keystore
+*.jks

@@ -1,14 +1,13 @@
-// Fuerza que el APK se firme siempre con la llave fija del repositorio
-// (android-signing/debug.keystore), sin importar dónde busque Gradle su llave de depuración.
+// Firma el APK release con la llave que llega por variables de entorno (secretos de GitHub).
 // La plantilla de Flutter firma las versiones release con la configuración "debug".
 allprojects {
     afterEvaluate { p ->
         if (p.plugins.hasPlugin('com.android.application')) {
             p.android.signingConfigs.getByName('debug') {
                 storeFile = new File(System.getenv('SUPERCHECK_KEYSTORE'))
-                storePassword = 'android'
-                keyAlias = 'androiddebugkey'
-                keyPassword = 'android'
+                storePassword = System.getenv('SUPERCHECK_KEYSTORE_PASSWORD')
+                keyAlias = 'supercheck'
+                keyPassword = System.getenv('SUPERCHECK_KEYSTORE_PASSWORD')
             }
         }
     }

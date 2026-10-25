@@ -1,28 +1,30 @@
 # SuperCheck
 
-Lista de supermercado con historial de listas reutilizables y verificador de productos por código
-de barras. Funciona **sin cuenta y sin internet para las listas** (se guardan en el teléfono); si
-querés compartirlas con la familia en tiempo real, se puede activar una cuenta (opcional y gratis).
+**La lista del supermercado con fotos, que además comprueba en la góndola que llevás el producto correcto.**
+Gratis, para Android y sin necesidad de crear una cuenta.
 
-## Instalar en el celular Android (lo más fácil)
+## Qué ofrece
 
-1. Desde el celular, entrá a la página de descargas del proyecto, iniciando sesión en GitHub:
-   <https://github.com/B3njaminGC/SuperCheck/releases>
-2. En la versión más nueva tocá **SuperCheck.apk** para descargarlo.
-3. Abrí el archivo descargado. Android va a avisar que bloquea instalar apps de esta fuente: tocá
-   **Configuración** y activá **Permitir de esta fuente** (solo para el navegador o gestor de archivos
-   que usaste). Volvé y tocá **Instalar**. Si Play Protect avisa de una app "no verificada", tocá
-   *Instalar de todos modos*: es normal en apps que no vienen de la tienda.
-4. Abrí SuperCheck. Entra directo a tus listas: no pide cuenta ni configuración.
-5. Para actualizar, descargá el APK nuevo e instalalo **encima**: las listas se conservan (la app se
-   firma siempre con la misma llave). No la desinstales antes: borraría las listas del teléfono.
+- **Listas con fotos**: buscá productos por nombre y elegí marca y tamaño exactos.
+- **Escáner de código de barras**: confirma que el producto es el de tu lista y te sugiere cuántas unidades llevar si el tamaño cambia.
+- **Productos propios y favoritos**: creá lo que no esté en la base con tu foto y marcá tus favoritos.
+- **Historial**: finalizá cada compra y reutilizá listas anteriores con un toque.
+- **Compartir sin cuenta**: enviá una copia de la lista por WhatsApp; quien la recibe la importa pegando el mensaje.
+- Todo se guarda en tu teléfono. Compartir en vivo con la familia es opcional (ver más abajo).
 
-La primera vez que escanees, Android pide permiso para usar la cámara.
+## Descargar (Android)
+
+1. Entrá a **[Releases](https://github.com/B3njaminGC/SuperCheck/releases/latest)** desde tu celular y tocá **SuperCheck.apk**.
+2. Abrí el archivo. Si Android avisa que bloquea instalar apps de esta fuente, tocá **Configuración** y activá
+   **Permitir de esta fuente**. Si Play Protect avisa de una app "no verificada", tocá *Instalar de todos
+   modos*: es normal en apps que no vienen de la tienda.
+3. Abrí SuperCheck: entra directo a tus listas. La primera vez que escanees, Android pide permiso para la cámara.
+4. Para actualizar, instalá el APK nuevo **encima**: las listas se conservan. No desinstales antes.
 
 ## Cómo sacar un APK nuevo
 
-En GitHub: pestaña **Actions** → **APK de Android** → **Run workflow**. Tarda unos 10 minutos y deja
-el archivo en **Releases**. Cada versión suma un número, así Android acepta instalarla encima de la anterior.
+En GitHub: pestaña **Actions** → **APK de Android** → **Run workflow**. Tarda unos 10 minutos y deja el archivo
+en **Releases** (hacen falta los secretos de firma, ver *Firma del APK*).
 
 ## Cuentas y compartir en vivo (opcional)
 
@@ -90,8 +92,7 @@ supercheck/
 ├── analysis_options.yaml
 ├── .github/workflows/ci.yml           # flutter analyze + flutter test en cada push
 ├── .github/workflows/apk.yml          # arma el APK y lo publica en Releases
-├── android-signing/debug.keystore     # llave de firma fija (repositorio privado)
-├── tools/patch_android_manifest.py    # permisos de internet y cámara para Android
+├── tools/                             # parches de Android, ícono y firma del APK
 ├── supabase/migrations/               # ejecutar en orden
 │   ├── 0001_init.sql                  # tablas, RLS, invitaciones, realtime
 │   ├── 0002_history.sql               # estado de lista, finalizar/reabrir/reutilizar
@@ -121,6 +122,20 @@ Con el SDK de Flutter instalado: `flutter create --platforms=android .`, `flutte
 `flutter test` y `flutter run` (con `--dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...`
 si querés probar la cuenta). Editá `offUserAgent` en `lib/core/constants/app_constants.dart` con un mail
 de contacto real.
+
+## Firma del APK
+
+La llave de firma **no está en el repositorio**: vive como secretos de GitHub (*Settings → Secrets and
+variables → Actions*): `ANDROID_KEYSTORE_BASE64` (el archivo `.keystore` en base64) y
+`ANDROID_KEYSTORE_PASSWORD`. Alias de la llave: `supercheck`. Tiene que ser siempre la misma: si cambia,
+Android no deja actualizar encima y hay que desinstalar la app (se pierden las listas). Para armar tu propio
+APK desde un fork, generá una llave con `keytool -genkeypair` y cargá esos dos secretos.
+
+## Licencia y datos
+
+Código bajo licencia [MIT](LICENSE). Los datos y las fotos de productos vienen de
+[Open Food Facts](https://world.openfoodfacts.org), una base abierta y colaborativa (licencia ODbL;
+las imágenes, CC BY-SA).
 
 ## Notas de diseño
 
