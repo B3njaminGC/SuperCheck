@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/constants/app_constants.dart';
 import 'core/mode/app_mode.dart';
+import 'core/theme/app_theme.dart';
 import 'features/auth/presentation/auth_providers.dart';
 import 'features/auth/presentation/login_page.dart';
 import 'features/shopping_list/presentation/home_page.dart';
@@ -16,15 +17,8 @@ class SuperCheckApp extends StatelessWidget {
     return MaterialApp(
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorSchemeSeed: Colors.green,
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData(
-        colorSchemeSeed: Colors.green,
-        brightness: Brightness.dark,
-        useMaterial3: true,
-      ),
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
       home: const AuthGate(),
     );
   }

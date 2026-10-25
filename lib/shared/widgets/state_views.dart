@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 
+import 'app_logo.dart';
+
 class EmptyView extends StatelessWidget {
   const EmptyView({
     super.key,
     required this.icon,
     required this.title,
     this.message,
+    this.showLogo = false,
   });
 
+  /// Muestra el logo en lugar del ícono (pantalla de bienvenida).
+  final bool showLogo;
   final IconData icon;
   final String title;
   final String? message;
@@ -21,7 +26,10 @@ class EmptyView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 56, color: theme.colorScheme.outline),
+            if (showLogo)
+              const AppLogo(size: 96)
+            else
+              Icon(icon, size: 56, color: theme.colorScheme.outline),
             const SizedBox(height: 16),
             Text(
               title,

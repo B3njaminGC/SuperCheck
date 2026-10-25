@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../shared/widgets/app_logo.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/mode/app_mode.dart';
 import '../../../shared/widgets/snackbars.dart';
@@ -79,11 +80,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Icon(
-                      Icons.shopping_cart_checkout,
-                      size: 56,
-                      color: theme.colorScheme.primary,
-                    ),
+                    const Center(child: AppLogo(size: 88)),
                     const SizedBox(height: 12),
                     Text(
                       AppConstants.appName,

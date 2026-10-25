@@ -31,6 +31,7 @@ class ListsPage extends ConsumerWidget {
       data: (items) {
         if (items.isEmpty) {
           return EmptyView(
+            showLogo: true,
             icon: Icons.shopping_cart_outlined,
             title: 'Todavía no tenés listas',
             message: isLocal

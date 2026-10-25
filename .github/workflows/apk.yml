@@ -48,6 +48,9 @@ jobs:
       - name: Dependencias
         run: flutter pub get
 
+      - name: Ícono de la app
+        run: dart run flutter_launcher_icons
+
       - name: Tests
         run: flutter test
 
