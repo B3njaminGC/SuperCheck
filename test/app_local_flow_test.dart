@@ -43,11 +43,11 @@ void main() {
     expect(find.text('Todavía no tenés listas'), findsOneWidget);
     expect(find.text('Entrar'), findsNothing);
 
-    await tester.tap(find.byTooltip('Cuenta'));
+    // Sin servidor configurado no hay menú de cuenta: el ícono es la ayuda.
+    expect(find.byTooltip('Cuenta'), findsNothing);
+    await tester.tap(find.byTooltip('Ayuda'));
     await settle(tester);
-    expect(find.text('Listas guardadas en este teléfono'), findsOneWidget);
-    // Sin servidor configurado no se ofrece crear una cuenta.
-    expect(find.textContaining('Compartir con mi familia'), findsNothing);
+    expect(find.text('¿Qué es SuperCheck?'), findsOneWidget);
 
     await closeApp(tester);
   });
@@ -439,6 +439,71 @@ void main() {
       find.widgetWithText(FilledButton, 'Importar lista'),
     );
     expect(button.onPressed, isNull);
+
+    await closeApp(tester);
+  });
+
+  testWidgets('la primera vez se ve la bienvenida y después no', (tester) async {
+    await pumpApp(tester, prefs, showOnboarding: true);
+
+    expect(find.text('Bienvenido a SuperCheck'), findsOneWidget);
+    expect(find.text('Mis listas'), findsNothing);
+
+    await tester.tap(find.text('Siguiente'));
+    await settle(tester);
+    expect(find.text('Armá tus listas'), findsOneWidget);
+    await tester.tap(find.text('Siguiente'));
+    await settle(tester);
+    expect(find.text('Escaneá en la góndola'), findsOneWidget);
+    await tester.tap(find.text('Siguiente'));
+    await settle(tester);
+    expect(find.text('Guardá y compartí'), findsOneWidget);
+    expect(find.text('Saltar'), findsNothing);
+
+    await tester.tap(find.text('Empezar'));
+    await settle(tester);
+    expect(find.text('Mis listas'), findsOneWidget);
+
+    // Al volver a abrir la app ya no aparece.
+    await closeApp(tester);
+    await pumpApp(tester, prefs, showOnboarding: true);
+    expect(find.text('Mis listas'), findsOneWidget);
+    expect(find.text('Bienvenido a SuperCheck'), findsNothing);
+
+    await closeApp(tester);
+  });
+
+  testWidgets('se puede saltear la bienvenida', (tester) async {
+    await pumpApp(tester, prefs, showOnboarding: true);
+    await tester.tap(find.text('Saltar'));
+    await settle(tester);
+    expect(find.text('Mis listas'), findsOneWidget);
+    await closeApp(tester);
+  });
+
+  testWidgets('la ayuda explica la app y permite ver la bienvenida otra vez',
+      (tester) async {
+    await pumpApp(tester, prefs);
+    await tester.tap(find.byTooltip('Ayuda'));
+    await settle(tester);
+
+    expect(find.text('Armar una lista'), findsOneWidget);
+    await tester.tap(find.text('Usar el escáner'));
+    await settle(tester);
+    expect(find.textContaining('apuntá al producto'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('Ver la bienvenida otra vez'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Ver la bienvenida otra vez'));
+    await settle(tester);
+    expect(find.text('Bienvenido a SuperCheck'), findsOneWidget);
+
+    await tester.tap(find.text('Saltar'));
+    await settle(tester);
+    expect(find.text('¿Qué es SuperCheck?'), findsOneWidget);
 
     await closeApp(tester);
   });

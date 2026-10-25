@@ -8,6 +8,7 @@ import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supercheck/app.dart';
 import 'package:supercheck/core/mode/app_mode.dart';
+import 'package:supercheck/features/onboarding/presentation/onboarding_controller.dart';
 import 'package:supercheck/features/products/data/product_photo_picker.dart';
 import 'package:supercheck/features/products/data/product_repository.dart';
 import 'package:supercheck/features/products/presentation/my_products_controller.dart';
@@ -22,12 +23,16 @@ Future<void> pumpApp(
   MockClientHandler? offHandler,
   ProductPhotoPicker? photoPicker,
   ListSharer? listSharer,
+  bool showOnboarding = false,
 }) async {
   // Pantalla alta, como un teléfono: con los 600 px de alto de la prueba, las tarjetas de
   // resultados quedaban debajo del borde y no se podían tocar.
   tester.view.physicalSize = const Size(800, 1600);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
+
+  // Salvo que la prueba lo pida, la bienvenida ya se vio.
+  if (!showOnboarding) await prefs.setBool(OnboardingController.storageKey, true);
 
   final products = ProductRepository(
     client: MockClient(

@@ -6,6 +6,7 @@ import '../../../core/mode/app_mode.dart';
 import '../../../shared/widgets/snackbars.dart';
 import '../../../shared/widgets/text_prompt_dialog.dart';
 import '../../auth/presentation/auth_providers.dart';
+import '../../onboarding/presentation/help_page.dart';
 import 'history_page.dart';
 import 'import_list_page.dart';
 import 'list_detail_page.dart';
@@ -110,6 +111,16 @@ class _HomePageState extends ConsumerState<HomePage> {
               tooltip: 'Unirme con código',
               onPressed: _joinList,
             ),
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            tooltip: 'Ayuda',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const HelpPage()),
+            ),
+          ),
+          // El menú de cuenta solo tiene sentido si hay servidor configurado o ya se
+          // inició sesión; si no, no hace nada.
+          if (cloudAvailable || !isLocal)
           PopupMenuButton<String>(
             icon: const Icon(Icons.account_circle_outlined),
             tooltip: 'Cuenta',

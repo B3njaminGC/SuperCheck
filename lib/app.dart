@@ -7,6 +7,8 @@ import 'core/mode/app_mode.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/presentation/auth_providers.dart';
 import 'features/auth/presentation/login_page.dart';
+import 'features/onboarding/presentation/onboarding_controller.dart';
+import 'features/onboarding/presentation/onboarding_page.dart';
 import 'features/shopping_list/presentation/home_page.dart';
 
 class SuperCheckApp extends StatelessWidget {
@@ -38,6 +40,13 @@ class AuthGate extends ConsumerWidget {
     ref.listen<AppMode>(appModeProvider, (previous, next) {
       Navigator.of(context).popUntil((route) => route.isFirst);
     });
+
+    // La primera vez que se abre la app, una bienvenida corta.
+    if (!ref.watch(onboardingDoneProvider)) {
+      return OnboardingPage(
+        onDone: () => ref.read(onboardingDoneProvider.notifier).complete(),
+      );
+    }
 
     final mode = ref.watch(appModeProvider);
     return mode == AppMode.local ? const HomePage() : const _CloudGate();
