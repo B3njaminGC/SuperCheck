@@ -16,7 +16,7 @@ class HelpPage extends ConsumerWidget {
       'Armar una lista',
       'En "Mis listas" tocá "Nueva lista" y ponele un nombre, por ejemplo "Compras '
           'del mes". Adentro, tocá "Agregar producto", escribí el nombre (ej. leche), '
-          'tocá la lupa y elegí el que quieras: se ve con su foto, marca y tamaño. '
+          'esperá un instante a que aparezcan los productos y elegí el que quieras: se ve con su foto, marca y tamaño. '
           'Tocá un producto otra vez para sumar una unidad.'
     ),
     (

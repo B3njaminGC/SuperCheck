@@ -179,7 +179,7 @@ void main() {
     await closeApp(tester);
   });
 
-  testWidgets('la búsqueda solo consulta al tocar la lupa, no mientras se escribe',
+  testWidgets('busca sola cuando dejás de escribir, no con cada letra',
       (tester) async {
     var requests = 0;
     await pumpApp(tester, prefs, offHandler: (request) async {
@@ -203,18 +203,19 @@ void main() {
 
     await tester.tap(find.text('Agregar producto'));
     await settle(tester);
+    // Escribiendo seguido (menos de 0,8 s entre letras) no se consulta nada.
     for (final text in ['le', 'lec', 'leche']) {
       await tester.enterText(find.byType(TextField), text);
-      await settle(tester, frames: 6);
+      await settle(tester, frames: 3);
     }
     expect(requests, 0);
-    expect(find.text('Tocá la lupa para buscar'), findsOneWidget);
+    expect(find.text('Buscando…'), findsOneWidget);
     // Lo que no existe se puede crear sin buscar nada; ya no hay "agregar sin código".
     expect(find.text('Crear producto "leche"'), findsOneWidget);
     expect(find.textContaining('sin código'), findsNothing);
 
-    await tester.tap(find.byTooltip('Buscar'));
-    await settle(tester);
+    // Al dejar de escribir, una sola consulta y aparecen los resultados.
+    await settle(tester, frames: 10);
     expect(requests, 1);
     expect(find.text('Leche entera'), findsOneWidget);
 

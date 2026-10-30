@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -31,9 +33,13 @@ class ProductSearchPage extends ConsumerStatefulWidget {
 class _ProductSearchPageState extends ConsumerState<ProductSearchPage> {
   final _text = TextEditingController();
 
-  /// Último texto buscado. Open Food Facts limita las búsquedas, así que solo se
-  /// consulta cuando la persona toca la lupa o "Buscar" en el teclado.
+  /// Último texto buscado. Open Food Facts limita las búsquedas, así que no se consulta
+  /// con cada letra: se espera a que la persona deje de escribir un instante
+  /// ([_liveDelay], desde 3 letras), o se busca al toque con la lupa o "Buscar".
   String _query = '';
+
+  Timer? _debounce;
+  static const _liveDelay = Duration(milliseconds: 800);
 
   /// Marca elegida para filtrar los resultados (null = todas).
   String? _brand;
@@ -43,15 +49,37 @@ class _ProductSearchPageState extends ConsumerState<ProductSearchPage> {
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _text.dispose();
     super.dispose();
   }
 
-  void _onChanged(String _) => setState(() {}); // refresca lupa, borrar y "Crear producto"
+  void _onChanged(String value) {
+    _debounce?.cancel();
+    final text = value.trim();
+    if (text.length < 3) {
+      // Muy poco para buscar: se vuelve a la vista con tus productos.
+      setState(() {
+        _query = '';
+        _brand = null;
+      });
+      return;
+    }
+    setState(() {}); // refresca lupa, borrar y "Crear producto"
+    if (text == _query) return;
+    _debounce = Timer(_liveDelay, () {
+      if (!mounted) return;
+      setState(() {
+        _query = text;
+        _brand = null;
+      });
+    });
+  }
 
   void _searchNow([String? value]) {
     final text = (value ?? _text.text).trim();
     if (text.length < 2) return;
+    _debounce?.cancel();
     FocusScope.of(context).unfocus();
     setState(() {
       _query = text;
@@ -149,6 +177,7 @@ class _ProductSearchPageState extends ConsumerState<ProductSearchPage> {
               icon: const Icon(Icons.clear),
               tooltip: 'Borrar',
               onPressed: () {
+                _debounce?.cancel();
                 _text.clear();
                 setState(() {
                   _query = '';
@@ -180,21 +209,21 @@ class _ProductSearchPageState extends ConsumerState<ProductSearchPage> {
     );
   }
 
-  /// Antes de tocar la lupa: ya se muestran los productos propios que coinciden
-  /// (no gastan consultas de internet).
+  /// Mientras se espera a que la persona termine de escribir: ya se muestran los
+  /// productos propios que coinciden (no gastan consultas de internet).
   Widget _beforeSearch(String typed) {
     final mine = _localMatches(typed);
     if (mine.isEmpty) {
       return EmptyView(
         icon: Icons.search,
-        title: 'Tocá la lupa para buscar',
-        message: 'Busca "$typed" en Open Food Facts.',
+        title: typed.length >= 3 ? 'Buscando…' : 'Seguí escribiendo',
+        message: 'Escribí al menos 3 letras y te voy mostrando los productos.',
       );
     }
     return _grid(
       _ranked(mine),
-      header: const _SectionTitle('Tus productos y favoritos · tocá la lupa para '
-          'buscar también en Open Food Facts'),
+      header: const _SectionTitle('Tus productos y favoritos · buscando también en '
+          'Open Food Facts…'),
     );
   }
 
@@ -286,8 +315,8 @@ class _ProductSearchPageState extends ConsumerState<ProductSearchPage> {
       return const EmptyView(
         icon: Icons.search,
         title: 'Buscá un producto',
-        message: 'Escribí el nombre, tocá la lupa y elegí la marca y el '
-            'tamaño exactos que querés comprar. Tocá la estrella de un producto '
+        message: 'Escribí el nombre y esperá un instante: te voy mostrando los '
+            'productos. Elegí la marca y el tamaño exactos que querés comprar. Tocá la estrella de un producto '
             'para guardarlo en Favoritos. Si no existe, podés crearlo con tu '
             'propia foto (verdura, pan y lo que no tiene código de barras también).',
       );

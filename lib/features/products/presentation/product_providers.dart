@@ -9,7 +9,8 @@ final productRepositoryProvider = Provider<ProductRepository>((ref) {
 });
 
 /// Resultados de búsqueda por nombre. La pantalla solo cambia el `query` cuando la
-/// persona lo pide (lupa): la búsqueda de OFF tiene un límite de consultas bajo.
+/// persona deja de escribir un instante o toca la lupa: la búsqueda de OFF tiene un
+/// límite de consultas bajo.
 /// Los resultados buenos se guardan mientras la app esté abierta, así repetir una
 /// búsqueda no vuelve a gastar consultas; los errores no se guardan.
 final productSearchProvider =
