@@ -23,8 +23,8 @@ class HelpPage extends ConsumerWidget {
       'Si el producto no aparece',
       'Escribilo igual y elegí "Crear producto": podés ponerle nombre, marca, '
           'tamaño y una foto sacada por vos. Queda guardado en "Mis productos" para '
-          'la próxima. Para cosas sin código de barras, como verdura o pan, usá '
-          '"Agregar sin código".'
+          'la próxima. Sirve también para lo que no tiene código de barras, como '
+          'verdura o pan: dejá el código vacío.'
     ),
     (
       'Comprar y tachar',
@@ -40,10 +40,17 @@ class HelpPage extends ConsumerWidget {
           'completar lo que necesitás. Si el código no se conoce, podés crearlo.'
     ),
     (
-      'Finalizar y repetir',
-      'Al terminar de comprar, tocá los tres puntitos de la lista y "Finalizar '
-          'lista". Queda en la pestaña "Historial": desde ahí la podés reutilizar '
-          'para armar otra igual sin empezar de cero.'
+      'Terminar la compra',
+      'Cuando tachás todo aparece abajo a la derecha un botón redondo con un check: '
+          'tocalo y la lista queda guardada en la pestaña "Historial". Desde ahí la '
+          'podés reutilizar para armar otra igual sin empezar de cero.'
+    ),
+    (
+      'Si no conseguiste todo',
+      'Cuando ya tachaste algo pero faltan productos, aparece un botón redondo con un '
+          'reloj. Al tocarlo, lo que compraste se guarda en el Historial y la lista '
+          'sigue en "Mis listas" marcada como PENDIENTE, solo con lo que falta, para '
+          'la próxima compra.'
     ),
     (
       'Favoritos y Mis productos',
@@ -53,7 +60,7 @@ class HelpPage extends ConsumerWidget {
     ),
     (
       'Enviar una lista a otra persona',
-      'En los tres puntitos de la lista tocá "Enviar copia de la lista" y elegí '
+      'Dentro de la lista tocá el ícono de compartir y elegí '
           'WhatsApp u otra app. Quien la recibe copia el mensaje, entra a "Mis '
           'listas", toca el ícono de importar (flecha hacia abajo) y pega. Es una '
           'copia: cada uno edita la suya.'
@@ -61,7 +68,7 @@ class HelpPage extends ConsumerWidget {
     (
       'Mis datos',
       'Todo se guarda en tu teléfono, sin cuenta. Si lo desinstalás, las listas se '
-          'borran. Para borrar una lista tocá los tres puntitos y "Borrar lista".'
+          'borran. Para borrar una lista tocá el tacho de basura.'
     ),
   ];
 

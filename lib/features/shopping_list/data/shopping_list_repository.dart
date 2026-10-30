@@ -39,6 +39,10 @@ abstract class ShoppingListRepository {
   /// Guarda la lista en el historial (queda de solo lectura).
   Future<void> completeList(String listId);
 
+  /// Termina la compra sin haber conseguido todo: lo tachado pasa al historial como una
+  /// lista finalizada y esta lista queda solo con lo que falta, marcada como pendiente.
+  Future<void> leavePendingList(String listId);
+
   /// Saca la lista del historial y la vuelve a dejar editable.
   Future<void> reopenList(String listId);
 

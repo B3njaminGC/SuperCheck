@@ -312,7 +312,7 @@ class ProductRepository {
     if (code == 502 || code == 503 || code == 504) {
       throw RemoteServiceException(
         'Open Food Facts está saturado o limitó las búsquedas ($code). '
-        'Probá de nuevo en un minuto, o agregalo sin código.',
+        'Probá de nuevo en un minuto, o creá el producto vos.',
         statusCode: code,
       );
     }

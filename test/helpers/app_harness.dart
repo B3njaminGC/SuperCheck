@@ -95,13 +95,16 @@ Future<void> createListViaUi(WidgetTester tester, String name) async {
   await settle(tester);
 }
 
-/// Dentro de una lista: agrega un ítem de texto libre desde la búsqueda y vuelve.
-Future<void> addFreeTextItemViaUi(WidgetTester tester, String text) async {
+/// Dentro de una lista: crea un producto propio con ese nombre (sin código ni foto), que
+/// queda agregado a la lista, y vuelve.
+Future<void> addOwnProductViaUi(WidgetTester tester, String name) async {
   await tester.tap(find.text('Agregar producto'));
   await settle(tester);
-  await tester.enterText(find.byType(TextField), text);
-  await settle(tester, frames: 8); // pasa la espera de la búsqueda (450 ms)
-  await tester.tap(find.text('Agregar "$text" sin código'));
+  await tester.enterText(find.byType(TextField), name);
+  await settle(tester, frames: 2);
+  await tester.tap(find.text('Crear producto "$name"'));
+  await settle(tester);
+  await tester.tap(find.text('Guardar producto'));
   await settle(tester);
   tester.state<NavigatorState>(find.byType(Navigator)).pop();
   await settle(tester);

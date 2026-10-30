@@ -62,7 +62,7 @@ void main() {
     expect(find.text('Compras del mes'), findsWidgets);
     expect(find.text('La lista está vacía'), findsOneWidget);
 
-    await addFreeTextItemViaUi(tester, 'pan');
+    await addOwnProductViaUi(tester, 'Pan');
     expect(find.text('Pan'), findsOneWidget);
     expect(find.text('0 de 1 en el carrito'), findsOneWidget);
 
@@ -94,7 +94,7 @@ void main() {
       (tester) async {
     await pumpApp(tester, prefs);
     await createListViaUi(tester, 'Compras del mes');
-    await addFreeTextItemViaUi(tester, 'pan');
+    await addOwnProductViaUi(tester, 'Pan');
     await tester.tap(find.text('Pan'));
     await settle(tester);
     await finishListViaUi(tester);
@@ -165,7 +165,7 @@ void main() {
       (tester) async {
     await pumpApp(tester, prefs);
     await createListViaUi(tester, 'Compras del mes');
-    await addFreeTextItemViaUi(tester, 'pan');
+    await addOwnProductViaUi(tester, 'Pan');
     await closeApp(tester);
 
     // "Reiniciar" la app: mismos datos guardados, pantallas nuevas.
@@ -209,8 +209,9 @@ void main() {
     }
     expect(requests, 0);
     expect(find.text('Tocá la lupa para buscar'), findsOneWidget);
-    // Lo que no tiene código se puede agregar sin buscar nada.
-    expect(find.text('Agregar "leche" sin código'), findsOneWidget);
+    // Lo que no existe se puede crear sin buscar nada; ya no hay "agregar sin código".
+    expect(find.text('Crear producto "leche"'), findsOneWidget);
+    expect(find.textContaining('sin código'), findsNothing);
 
     await tester.tap(find.byTooltip('Buscar'));
     await settle(tester);
@@ -402,7 +403,7 @@ void main() {
     final sharer = FakeListSharer();
     await pumpApp(tester, prefs, listSharer: sharer);
     await createListViaUi(tester, 'Compras del mes');
-    await addFreeTextItemViaUi(tester, 'pan');
+    await addOwnProductViaUi(tester, 'Pan');
 
     // Enviar: el botón de la lista abre el menú de compartir con el mensaje.
     await tester.tap(find.byTooltip('Enviar copia de la lista'));
@@ -416,7 +417,7 @@ void main() {
           : 'aviso: ${tester.widgetList<Text>(avisos).map((t) => t.data).join(' | ')}',
     );
     expect(sharer.sent.single, contains('• Pan'));
-    expect(sharer.sent.single, contains('SC1:'));
+    expect(sharer.sent.single, contains('SC2:'));
 
     // Recibir: desde Mis listas se importa pegando el mensaje.
     tester.state<NavigatorState>(find.byType(Navigator)).pop();
@@ -564,6 +565,60 @@ void main() {
     await tester.tap(find.text('Opinar o reportar un error'));
     await settle(tester);
     expect(opener.opened.single.toString(), contains('docs.google.com/forms'));
+    await closeApp(tester);
+  });
+
+  testWidgets('el reloj deja lo que falta como lista PENDIENTE', (tester) async {
+    await pumpApp(tester, prefs);
+    await createListViaUi(tester, 'Compras del mes');
+    await addOwnProductViaUi(tester, 'Pan');
+    await addOwnProductViaUi(tester, 'Leche');
+
+    // Sin nada tachado no hay reloj.
+    expect(find.byTooltip('Dejar lo que falta para después'), findsNothing);
+
+    await tester.tap(find.text('Pan'));
+    await settle(tester);
+    expect(find.byTooltip('Dejar lo que falta para después'), findsOneWidget);
+    expect(find.byTooltip('Terminar la compra'), findsNothing);
+
+    await tester.tap(find.byTooltip('Dejar lo que falta para después'));
+    await settle(tester);
+    await tester.tap(find.widgetWithText(FilledButton, 'Dejar pendiente'));
+    await settle(tester);
+
+    // Vuelve al inicio: la lista sigue, marcada PENDIENTE.
+    expect(find.text('Mis listas'), findsOneWidget);
+    expect(find.text('Compras del mes'), findsOneWidget);
+    expect(find.text('PENDIENTE'), findsOneWidget);
+
+    // Conserva solo lo que faltaba.
+    await tester.tap(find.text('Compras del mes'));
+    await settle(tester);
+    expect(find.text('Leche'), findsOneWidget);
+    expect(find.text('Pan'), findsNothing);
+    expect(find.text('PENDIENTE'), findsOneWidget);
+
+    // Lo comprado quedó en el historial.
+    tester.state<NavigatorState>(find.byType(Navigator)).pop();
+    await settle(tester);
+    await tester.tap(find.text('Historial'));
+    await settle(tester);
+    expect(find.text('Compras del mes'), findsOneWidget);
+
+    // Al conseguir lo que faltaba y terminar, ya no queda ninguna lista.
+    await tester.tap(find.text('Listas'));
+    await settle(tester);
+    await tester.tap(find.text('Compras del mes'));
+    await settle(tester);
+    await tester.tap(find.text('Leche'));
+    await settle(tester);
+    await tester.tap(find.byTooltip('Terminar la compra'));
+    await settle(tester);
+    await tester.tap(find.widgetWithText(FilledButton, 'Finalizar'));
+    await settle(tester);
+    expect(find.text('Todavía no tenés listas'), findsOneWidget);
+
     await closeApp(tester);
   });
 }

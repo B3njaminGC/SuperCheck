@@ -20,6 +20,7 @@ class ShoppingList extends Equatable {
     this.status = ListStatus.active,
     this.completedAt,
     this.itemCount,
+    this.pending = false,
   });
 
   final String id;
@@ -38,6 +39,9 @@ class ShoppingList extends Equatable {
   /// Cantidad de productos; solo viene cargada en las consultas del historial.
   final int? itemCount;
 
+  /// La compra terminó sin conseguir todo: la lista conserva solo lo que faltó.
+  final bool pending;
+
   bool get isCompleted => status == ListStatus.completed;
 
   /// Copia con cambios. [clearCompletedAt] borra la fecha de finalización (al reabrir).
@@ -47,6 +51,7 @@ class ShoppingList extends Equatable {
     DateTime? completedAt,
     bool clearCompletedAt = false,
     int? itemCount,
+    bool? pending,
   }) {
     return ShoppingList(
       id: id,
@@ -57,6 +62,7 @@ class ShoppingList extends Equatable {
       status: status ?? this.status,
       completedAt: clearCompletedAt ? null : (completedAt ?? this.completedAt),
       itemCount: itemCount ?? this.itemCount,
+      pending: pending ?? this.pending,
     );
   }
 
@@ -69,6 +75,7 @@ class ShoppingList extends Equatable {
         'created_at': createdAt.toUtc().toIso8601String(),
         'status': status.name,
         'completed_at': completedAt?.toUtc().toIso8601String(),
+        if (pending) 'pending': true,
       };
 
   factory ShoppingList.fromJson(Map<String, dynamic> json) {
@@ -83,6 +90,7 @@ class ShoppingList extends Equatable {
           ? null
           : DateTime.parse(json['completed_at'] as String),
       itemCount: _countFrom(json['list_items']),
+      pending: json['pending'] == true,
     );
   }
 
@@ -99,5 +107,5 @@ class ShoppingList extends Equatable {
 
   @override
   List<Object?> get props =>
-      [id, name, ownerId, inviteCode, createdAt, status, completedAt, itemCount];
+      [id, name, ownerId, inviteCode, createdAt, status, completedAt, itemCount, pending];
 }

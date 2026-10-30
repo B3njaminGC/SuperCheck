@@ -47,7 +47,7 @@ class _ProductSearchPageState extends ConsumerState<ProductSearchPage> {
     super.dispose();
   }
 
-  void _onChanged(String _) => setState(() {}); // refresca lupa, borrar y "sin código"
+  void _onChanged(String _) => setState(() {}); // refresca lupa, borrar y "Crear producto"
 
   void _searchNow([String? value]) {
     final text = (value ?? _text.text).trim();
@@ -66,15 +66,6 @@ class _ProductSearchPageState extends ConsumerState<ProductSearchPage> {
     try {
       await _list.addProduct(product);
       if (mounted) showMessage(context, '${product.name} agregado');
-    } on AppException catch (e) {
-      if (mounted) showMessage(context, e.message);
-    }
-  }
-
-  Future<void> _addCustom(String name) async {
-    try {
-      await _list.addCustomItem(name);
-      if (mounted) showMessage(context, '"$name" agregado');
     } on AppException catch (e) {
       if (mounted) showMessage(context, e.message);
     }
@@ -176,10 +167,8 @@ class _ProductSearchPageState extends ConsumerState<ProductSearchPage> {
           ? _idle(library, favorites)
           : Column(
               children: [
-                // Siempre disponibles, aunque falle la búsqueda en Open Food Facts.
+                // Siempre disponible, aunque falle la búsqueda en Open Food Facts.
                 if (typed.length >= 2) ...[
-                  _CustomItemTile(text: typed, onAdd: () => _addCustom(typed)),
-                  const Divider(height: 1),
                   _CreateProductTile(text: typed, onCreate: () => _create(typed)),
                   const Divider(height: 1),
                 ],
@@ -253,8 +242,7 @@ class _ProductSearchPageState extends ConsumerState<ProductSearchPage> {
             icon: Icons.search_off,
             title: 'No encontré productos',
             message: 'Probá con otro nombre o con menos palabras. Si no existe, '
-                'creá el producto con tu foto, o agregalo sin código con las '
-                'opciones de arriba.',
+                'creá el producto con tu foto y marca desde la opción de arriba.',
           );
         }
         return _grid(_ranked(products));
@@ -301,8 +289,7 @@ class _ProductSearchPageState extends ConsumerState<ProductSearchPage> {
         message: 'Escribí el nombre, tocá la lupa y elegí la marca y el '
             'tamaño exactos que querés comprar. Tocá la estrella de un producto '
             'para guardarlo en Favoritos. Si no existe, podés crearlo con tu '
-            'propia foto; si no tiene código de barras (verdura, pan), elegí '
-            '"Agregar sin código".',
+            'propia foto (verdura, pan y lo que no tiene código de barras también).',
       );
     }
 
@@ -617,24 +604,6 @@ class _CreateProductTile extends StatelessWidget {
       subtitle: const Text('Con marca, tamaño y tu propia foto'),
       trailing: const Icon(Icons.chevron_right),
       onTap: onCreate,
-    );
-  }
-}
-
-class _CustomItemTile extends StatelessWidget {
-  const _CustomItemTile({required this.text, required this.onAdd});
-
-  final String text;
-  final VoidCallback onAdd;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: const CircleAvatar(child: Icon(Icons.edit_note)),
-      title: Text('Agregar "$text" sin código'),
-      subtitle: const Text('Para lo que no tiene código de barras'),
-      trailing: const Icon(Icons.add_circle_outline),
-      onTap: onAdd,
     );
   }
 }

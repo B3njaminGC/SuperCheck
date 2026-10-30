@@ -247,8 +247,43 @@ class LocalShoppingListRepository implements ShoppingListRepository {
     final list = _requireList(listId);
     if (list.isCompleted) return;
     _replaceList(
-      list.copyWith(status: ListStatus.completed, completedAt: _now()),
+      list.copyWith(status: ListStatus.completed, completedAt: _now(), pending: false),
     );
+    await _commit();
+  }
+
+  @override
+  Future<void> leavePendingList(String listId) async {
+    final list = _requireActiveList(listId);
+    final items = _itemsOf(listId);
+    final bought = {for (final i in items) if (i.isChecked) i.id};
+    if (bought.isEmpty) {
+      throw const AppException('Todavía no tachaste ningún producto.');
+    }
+    if (bought.length == items.length) {
+      throw const AppException('Ya está todo tachado: terminá la compra con el check.');
+    }
+
+    // Lo comprado se mueve a una lista finalizada nueva (sus productos conservan todo).
+    final now = _now();
+    final done = ShoppingList(
+      id: _newId('lista'),
+      name: list.name,
+      ownerId: localUserId,
+      inviteCode: '',
+      createdAt: now,
+      status: ListStatus.completed,
+      completedAt: now,
+    );
+    _items = [
+      for (final i in _items)
+        if (bought.contains(i.id))
+          ShoppingItem.fromJson({...i.toJson(), 'list_id': done.id})
+        else
+          i,
+    ];
+    _lists = [..._lists, done];
+    _replaceList(list.copyWith(pending: true));
     await _commit();
   }
 

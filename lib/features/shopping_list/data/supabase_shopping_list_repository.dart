@@ -97,6 +97,12 @@ class SupabaseShoppingListRepository implements ShoppingListRepository {
     });
   }
 
+  /// Todavía no existe del lado de la nube (necesita un cambio en la base de datos).
+  @override
+  Future<void> leavePendingList(String listId) async {
+    throw const AppException('Dejar pendiente solo funciona por ahora sin cuenta.');
+  }
+
   /// Saca la lista del historial y la vuelve a dejar editable.
   @override
   Future<void> reopenList(String listId) {

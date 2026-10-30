@@ -17,6 +17,7 @@ import '../domain/shopping_item.dart';
 import '../domain/shopping_list.dart';
 import 'list_flows.dart';
 import 'lists_providers.dart';
+import 'pending_chip.dart';
 import 'shopping_list_controller.dart';
 
 /// Detalle de una lista. Si está finalizada (historial) es de solo lectura y
@@ -37,10 +38,17 @@ class ListDetailPage extends ConsumerWidget {
     // Cuando ya está todo tachado aparece el botón de terminar la compra.
     final loaded = itemsAsync.valueOrNull ?? const <ShoppingItem>[];
     final allDone = !readOnly && loaded.isNotEmpty && loaded.every((i) => i.isChecked);
+    // Con algo tachado y algo sin tachar se puede dejar lo que falta para después.
+    final partial = !readOnly &&
+        ref.watch(appModeProvider) == AppMode.local &&
+        loaded.any((i) => i.isChecked) &&
+        !allDone;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(list?.name ?? 'Lista'),
+        title: list == null
+            ? const Text('Lista')
+            : ListNameWithBadge(name: list.name, pending: list.pending && !list.isCompleted),
         actions: list == null ? null : _actions(context, ref, list),
       ),
       body: itemsAsync.when(
@@ -65,7 +73,7 @@ class ListDetailPage extends ConsumerWidget {
                               'marca y el tamaño exactos.',
                     )
                   : ListView.builder(
-                      padding: EdgeInsets.only(bottom: allDone ? 168 : 96),
+                      padding: EdgeInsets.only(bottom: allDone || partial ? 168 : 96),
                       itemCount: items.length,
                       itemBuilder: (_, i) => _ItemTile(
                         item: items[i],
@@ -83,6 +91,18 @@ class ListDetailPage extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
+                if (partial) ...[
+                  FloatingActionButton(
+                    heroTag: 'pending-list',
+                    tooltip: 'Dejar lo que falta para después',
+                    shape: const CircleBorder(),
+                    backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                    foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
+                    onPressed: () => _leavePending(context, ref),
+                    child: const Icon(Icons.schedule, size: 28),
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 if (allDone) ...[
                   FloatingActionButton(
                     heroTag: 'finish-list',
@@ -223,6 +243,50 @@ class ListDetailPage extends ConsumerWidget {
     final navigator = Navigator.of(context);
     final deleted = await confirmAndDeleteList(context, ref, list);
     if (deleted) navigator.popUntil((route) => route.isFirst);
+  }
+
+  /// Termina la compra dejando lo que no se consiguió: lo tachado va al historial y la
+  /// lista queda con lo pendiente.
+  Future<void> _leavePending(BuildContext context, WidgetRef ref) async {
+    final items =
+        ref.read(shoppingListControllerProvider(listId)).valueOrNull ?? const [];
+    final bought = items.where((i) => i.isChecked).length;
+    final missing = items.length - bought;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Dejar lo que falta'),
+        content: Text(
+          'Los $bought productos que ya compraste se guardan en el Historial. '
+          'Esta lista queda con ${missing == 1 ? 'el 1 que falta' : 'los $missing que faltan'}, '
+          'marcada como PENDIENTE.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Dejar pendiente'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    try {
+      await ref.read(listActionsProvider).leavePending(listId);
+      navigator.pop();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Lo comprado quedó en el Historial. La lista sigue PENDIENTE.')),
+      );
+    } on AppException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    }
   }
 
   Future<void> _finish(BuildContext context, WidgetRef ref) async {

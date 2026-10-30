@@ -9,6 +9,7 @@ import '../../auth/presentation/auth_providers.dart';
 import '../domain/shopping_list.dart';
 import 'list_flows.dart';
 import 'lists_providers.dart';
+import 'pending_chip.dart';
 
 /// Pestaña "Listas": mis listas activas (propias y compartidas).
 class ListsPage extends ConsumerWidget {
@@ -65,7 +66,7 @@ class _ListTile extends ConsumerWidget {
 
     return ListTile(
       leading: const CircleAvatar(child: Icon(Icons.list_alt)),
-      title: Text(list.name),
+      title: ListNameWithBadge(name: list.name, pending: list.pending),
       subtitle: Text('Creada el ${formatShortDate(list.createdAt)}'),
       trailing: PopupMenuButton<String>(
         tooltip: 'Más opciones de ${list.name}',

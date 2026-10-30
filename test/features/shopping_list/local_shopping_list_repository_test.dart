@@ -362,4 +362,53 @@ void main() {
       ]);
     });
   });
+
+  group('dejar pendiente', () {
+    test('lo tachado pasa al historial y la lista queda con lo que falta', () async {
+      final list = await repo.createList('Compras');
+      await repo.addProduct(list.id, criollitas, checked: true);
+      await repo.addCustomItem(list.id, 'Leche');
+
+      await repo.leavePendingList(list.id);
+
+      final active = (await repo.watchLists().first).singleWhere((l) => !l.isCompleted);
+      expect(active.id, list.id);
+      expect(active.pending, isTrue);
+      expect((await repo.watchItems(list.id).first).map((i) => i.name), ['Leche']);
+
+      final history = await repo.fetchHistory();
+      expect(history, hasLength(1));
+      expect(history.single.name, 'Compras');
+      expect(history.single.itemCount, 1);
+      expect(history.single.pending, isFalse);
+      final bought = await repo.watchItems(history.single.id).first;
+      expect(bought.single.name, 'Galletitas de agua');
+      expect(bought.single.isChecked, isTrue);
+
+      // Sobrevive al reinicio de la app.
+      final again = LocalShoppingListRepository(prefs);
+      addTearDown(again.dispose);
+      expect((await again.watchLists().first).where((l) => l.pending), hasLength(1));
+    });
+
+    test('al finalizar la lista pendiente deja de estarlo', () async {
+      final list = await repo.createList('Compras');
+      await repo.addProduct(list.id, criollitas, checked: true);
+      await repo.addCustomItem(list.id, 'Leche');
+      await repo.leavePendingList(list.id);
+
+      await repo.completeList(list.id);
+      expect((await repo.fetchHistory()).where((l) => l.pending), isEmpty);
+    });
+
+    test('sin nada tachado, o con todo tachado, no se puede', () async {
+      final list = await repo.createList('Compras');
+      await repo.addCustomItem(list.id, 'Leche');
+      await expectLater(repo.leavePendingList(list.id), throwsA(isA<AppException>()));
+
+      final done = await repo.createList('Completa');
+      await repo.addProduct(done.id, criollitas, checked: true);
+      await expectLater(repo.leavePendingList(done.id), throwsA(isA<AppException>()));
+    });
+  });
 }

@@ -72,6 +72,12 @@ class ListActions {
     _refresh();
   }
 
+  /// Termina la compra dejando lo que falta como lista PENDIENTE.
+  Future<void> leavePending(String listId) async {
+    await _repo.leavePendingList(listId);
+    _refresh();
+  }
+
   Future<void> reopen(String listId) async {
     await _repo.reopenList(listId);
     _refresh();

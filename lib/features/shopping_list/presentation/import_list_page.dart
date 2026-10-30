@@ -122,7 +122,7 @@ class _ImportListPageState extends ConsumerState<ImportListPage> {
         children: [
           Text(
             'Pegá acá el mensaje que te enviaron con la lista (el que termina en un '
-            'código que empieza con SC1:).',
+            'código que empieza con SC).',
             style: theme.textTheme.bodyMedium,
           ),
           const SizedBox(height: 12),
@@ -149,7 +149,7 @@ class _ImportListPageState extends ConsumerState<ImportListPage> {
           if (text.trim().isNotEmpty && shared == null)
             Text(
               'No encontré una lista en ese texto. Copiá el mensaje completo, con el '
-              'código SC1:.',
+              'código SC.',
               style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.error),
             ),
           if (shared != null) _Preview(shared: shared),
