@@ -30,5 +30,8 @@ abstract final class AppConstants {
   static const latestReleaseApi =
       'https://api.github.com/repos/B3njaminGC/SuperCheck/releases/latest';
 
+  /// Página de la última versión (por si la descarga dentro de la app falla).
+  static const releasesPage = 'https://github.com/B3njaminGC/SuperCheck/releases/latest';
+
   static const httpTimeout = Duration(seconds: 12);
 }

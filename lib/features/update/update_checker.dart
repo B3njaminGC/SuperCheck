@@ -9,13 +9,28 @@ import '../../core/constants/app_constants.dart';
 
 /// Una versión más nueva que la instalada.
 class UpdateInfo {
-  const UpdateInfo({required this.build, required this.url});
+  const UpdateInfo({
+    required this.build,
+    required this.url,
+    this.size,
+    this.sha256,
+    this.pageUrl,
+  });
 
   /// Número de compilación (el mismo que lleva la etiqueta `app-N` de la release).
   final int build;
 
   /// Dónde descargar el APK.
   final Uri url;
+
+  /// Tamaño exacto del APK en bytes, para comprobar que la descarga llegó completa.
+  final int? size;
+
+  /// Huella SHA-256 (en hexadecimal) del APK, si GitHub la informa.
+  final String? sha256;
+
+  /// Página de la release, para abrirla en el navegador si la descarga falla.
+  final Uri? pageUrl;
 }
 
 /// Lee la respuesta de GitHub (`releases/latest`). Devuelve `null` si no tiene el formato
@@ -28,19 +43,42 @@ UpdateInfo? parseLatestRelease(Object? json) {
   if (match == null) return null;
 
   String? url;
+  int? size;
+  String? sha256;
   final assets = json['assets'];
   if (assets is List) {
     for (final a in assets) {
       if (a is Map && a['name'] == 'SuperCheck.apk') {
         url = a['browser_download_url'] as String?;
+        final s = a['size'];
+        size = s is int && s > 0 ? s : null;
+        final digest = a['digest'];
+        if (digest is String && RegExp(r'^sha256:[0-9a-f]{64}$').hasMatch(digest)) {
+          sha256 = digest.substring('sha256:'.length);
+        }
       }
     }
   }
-  url ??= json['html_url'] as String?;
-  final uri = url == null ? null : Uri.tryParse(url);
-  if (uri == null || uri.scheme != 'https' || uri.host != 'github.com') return null;
+  final page = _githubUri(json['html_url']);
+  // Sin el APK en la release no hay nada que descargar dentro de la app.
+  final apk = _githubUri(url) ?? page;
+  if (apk == null) return null;
 
-  return UpdateInfo(build: int.parse(match.group(1)!), url: uri);
+  return UpdateInfo(
+    build: int.parse(match.group(1)!),
+    url: apk,
+    size: apk == page ? null : size,
+    sha256: apk == page ? null : sha256,
+    pageUrl: page,
+  );
+}
+
+/// Esos datos vienen de afuera: solo se aceptan links https de github.com.
+Uri? _githubUri(Object? value) {
+  if (value is! String) return null;
+  final uri = Uri.tryParse(value);
+  if (uri == null || uri.scheme != 'https' || uri.host != 'github.com') return null;
+  return uri;
 }
 
 /// Número de compilación instalado (0 si no se puede leer).

@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +12,7 @@ import 'package:supercheck/app.dart';
 import 'package:supercheck/core/mode/app_mode.dart';
 import 'package:supercheck/features/onboarding/presentation/onboarding_controller.dart';
 import 'package:supercheck/features/products/data/product_photo_picker.dart';
+import 'package:supercheck/features/update/apk_downloader.dart';
 import 'package:supercheck/features/update/update_checker.dart';
 import 'package:supercheck/features/products/data/product_repository.dart';
 import 'package:supercheck/features/products/presentation/my_products_controller.dart';
@@ -27,6 +30,8 @@ Future<void> pumpApp(
   bool showOnboarding = false,
   UpdateInfo? newVersion,
   FakeUrlOpener? urlOpener,
+  FakeApkDownloader? downloader,
+  FakeApkInstaller? installer,
 }) async {
   // Pantalla alta, como un teléfono: con los 600 px de alto de la prueba, las tarjetas de
   // resultados quedaban debajo del borde y no se podían tocar.
@@ -54,6 +59,8 @@ Future<void> pumpApp(
         sharedPreferencesProvider.overrideWithValue(prefs),
         cloudAvailableProvider.overrideWithValue(false),
         updateCheckProvider.overrideWith((ref) async => newVersion),
+        apkDownloaderProvider.overrideWithValue(downloader ?? FakeApkDownloader()),
+        apkInstallerProvider.overrideWithValue(installer ?? FakeApkInstaller()),
         urlOpenerProvider.overrideWithValue((urlOpener ?? FakeUrlOpener()).open),
         productRepositoryProvider.overrideWithValue(products),
         if (photoPicker != null) productPhotoPickerProvider.overrideWithValue(photoPicker),
@@ -137,5 +144,46 @@ class FakeUrlOpener {
   Future<bool> open(Uri url) async {
     opened.add(url);
     return true;
+  }
+}
+
+/// Reemplaza la descarga del APK: no toca la red ni el disco.
+class FakeApkDownloader implements ApkDownloader {
+  FakeApkDownloader({this.gate, this.error});
+
+  /// Si se pasa, la descarga queda "en curso" hasta que se complete.
+  final Completer<void>? gate;
+
+  /// Si se pasa, la descarga falla con esto.
+  final Object? error;
+
+  final requested = <UpdateInfo>[];
+
+  @override
+  Future<File> download(
+    UpdateInfo info, {
+    void Function(int received, int total)? onProgress,
+    DownloadCancel? cancel,
+  }) async {
+    requested.add(info);
+    onProgress?.call(10 * 1024 * 1024, 20 * 1024 * 1024);
+    await gate?.future;
+    final failure = error;
+    if (failure != null) throw failure;
+    return File('/fake/SuperCheck-${info.build}.apk');
+  }
+}
+
+/// Reemplaza el instalador de Android: guarda lo que se habría instalado.
+class FakeApkInstaller implements ApkInstaller {
+  FakeApkInstaller([this.outcome = InstallOutcome.launched]);
+
+  final InstallOutcome outcome;
+  final installed = <String>[];
+
+  @override
+  Future<InstallOutcome> install(String path) async {
+    installed.add(path);
+    return outcome;
   }
 }

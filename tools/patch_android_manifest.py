@@ -3,6 +3,8 @@
 - INTERNET: las versiones release de Flutter no la traen y sin ella no hay búsqueda de
   productos ni sincronización.
 - CAMERA: para el lector de códigos de barras (la cámara no es obligatoria).
+- REQUEST_INSTALL_PACKAGES: para que la app pueda abrir el instalador al actualizarse
+  (Android pide al usuario activar "instalar apps desconocidas" para SuperCheck).
 - Nombre visible de la app.
 """
 import re
@@ -14,6 +16,7 @@ text = open(path, encoding="utf-8").read()
 extra = (
     '    <uses-permission android:name="android.permission.INTERNET"/>\n'
     '    <uses-permission android:name="android.permission.CAMERA"/>\n'
+    '    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>\n'
     '    <uses-feature android:name="android.hardware.camera" android:required="false"/>\n'
     '    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>\n'
 )

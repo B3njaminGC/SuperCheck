@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -6,7 +7,9 @@ import 'package:http/http.dart' as http;
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:supercheck/core/errors/app_exception.dart';
 import 'package:supercheck/features/products/data/product_photo_picker.dart';
+import 'package:supercheck/features/update/apk_downloader.dart';
 
 import 'package:supercheck/features/update/update_checker.dart';
 
@@ -531,19 +534,108 @@ void main() {
     await closeApp(tester);
   });
 
-  testWidgets('avisa si hay una versión nueva y el botón abre la descarga', (tester) async {
-    final opener = FakeUrlOpener();
-    final url = Uri.parse('https://github.com/B3njaminGC/SuperCheck/releases/download/app-99/SuperCheck.apk');
-    await pumpApp(tester, prefs, newVersion: UpdateInfo(build: 99, url: url), urlOpener: opener);
+  testWidgets('Actualizar baja el APK dentro de la app, avisa que terminó y deja instalar',
+      (tester) async {
+    final gate = Completer<void>();
+    final downloader = FakeApkDownloader(gate: gate);
+    final installer = FakeApkInstaller();
+    final url = Uri.parse(
+      'https://github.com/B3njaminGC/SuperCheck/releases/download/app-99/SuperCheck.apk',
+    );
+    await pumpApp(
+      tester,
+      prefs,
+      newVersion: UpdateInfo(build: 99, url: url),
+      downloader: downloader,
+      installer: installer,
+    );
 
     expect(find.text('Nueva versión disponible'), findsOneWidget);
     await tester.tap(find.text('Actualizar'));
     await settle(tester);
-    expect(opener.opened, [url]);
 
+    // Mientras baja: barra de progreso y cuánto va.
+    expect(downloader.requested.single.url, url);
+    expect(find.text('Descargando la versión nueva…'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byType(LinearProgressIndicator),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('10,0 de 20,0 MB · 50 %'), findsOneWidget);
+    expect(find.text('Descarga completa'), findsNothing);
+
+    // Al terminar avisa y recién ahí ofrece instalar.
+    gate.complete();
+    await settle(tester);
+    expect(find.text('Descarga completa'), findsOneWidget);
+    await tester.tap(find.text('Instalar'));
+    await settle(tester);
+    expect(installer.installed, hasLength(1));
+
+    await tester.tap(find.text('Cerrar'));
+    await settle(tester);
     await tester.tap(find.text('Más tarde'));
     await settle(tester);
     expect(find.text('Nueva versión disponible'), findsNothing);
+    await closeApp(tester);
+  });
+
+  testWidgets('si falla la descarga, se puede reintentar o abrir la página', (tester) async {
+    final downloader =
+        FakeApkDownloader(error: const AppException('Se cortó la conexión.'));
+    final opener = FakeUrlOpener();
+    final page = Uri.parse('https://github.com/B3njaminGC/SuperCheck/releases/tag/app-99');
+    await pumpApp(
+      tester,
+      prefs,
+      newVersion: UpdateInfo(
+        build: 99,
+        url: Uri.parse('https://github.com/B3njaminGC/SuperCheck/releases/download/app-99/SuperCheck.apk'),
+        pageUrl: page,
+      ),
+      downloader: downloader,
+      urlOpener: opener,
+    );
+
+    await tester.tap(find.text('Actualizar'));
+    await settle(tester);
+    expect(find.text('Se cortó la conexión.'), findsOneWidget);
+
+    await tester.tap(find.text('Reintentar'));
+    await settle(tester);
+    expect(downloader.requested, hasLength(2));
+
+    await tester.tap(find.text('Abrir en el navegador'));
+    await settle(tester);
+    expect(opener.opened, [page]);
+    await closeApp(tester);
+  });
+
+  testWidgets('si Android pide permiso para instalar, lo explica y deja reintentar',
+      (tester) async {
+    final installer = FakeApkInstaller(InstallOutcome.needsPermission);
+    await pumpApp(
+      tester,
+      prefs,
+      newVersion: UpdateInfo(
+        build: 99,
+        url: Uri.parse('https://github.com/B3njaminGC/SuperCheck/releases/download/app-99/SuperCheck.apk'),
+      ),
+      installer: installer,
+    );
+
+    await tester.tap(find.text('Actualizar'));
+    await settle(tester);
+    await tester.tap(find.text('Instalar'));
+    await settle(tester);
+    expect(find.textContaining('Permitir de esta fuente'), findsOneWidget);
+
+    await tester.tap(find.text('Instalar'));
+    await settle(tester);
+    expect(installer.installed, hasLength(2));
     await closeApp(tester);
   });
 

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../shared/widgets/snackbars.dart';
 import 'update_checker.dart';
+import 'update_dialog.dart';
 
 /// Aviso "Nueva versión disponible" para el inicio. No ocupa lugar si no hay nada nuevo.
 class UpdateBanner extends ConsumerStatefulWidget {
@@ -14,13 +14,6 @@ class UpdateBanner extends ConsumerStatefulWidget {
 
 class _UpdateBannerState extends ConsumerState<UpdateBanner> {
   bool _hidden = false;
-
-  Future<void> _update(UpdateInfo info) async {
-    final opened = await ref.read(urlOpenerProvider)(info.url);
-    if (!opened && mounted) {
-      showMessage(context, 'No se pudo abrir la descarga. Probá desde la página de Releases.');
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +42,7 @@ class _UpdateBannerState extends ConsumerState<UpdateBanner> {
               child: const Text('Más tarde'),
             ),
             FilledButton(
-              onPressed: () => _update(info),
+              onPressed: () => showUpdateDialog(context, info),
               child: const Text('Actualizar'),
             ),
           ],

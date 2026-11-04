@@ -19,6 +19,43 @@ void main() {
       expect(info.url.path, endsWith('/app-13/SuperCheck.apk'));
     });
 
+    test('lee también el tamaño, la huella y la página de la release', () {
+      final hash = 'a' * 64;
+      final info = parseLatestRelease({
+        'tag_name': 'app-13',
+        'html_url': 'https://github.com/B3njaminGC/SuperCheck/releases/tag/app-13',
+        'assets': [
+          {
+            'name': 'SuperCheck.apk',
+            'size': 78811867,
+            'digest': 'sha256:$hash',
+            'browser_download_url':
+                'https://github.com/B3njaminGC/SuperCheck/releases/download/app-13/SuperCheck.apk',
+          },
+        ],
+      })!;
+      expect(info.size, 78811867);
+      expect(info.sha256, hash);
+      expect(info.pageUrl!.path, endsWith('/tag/app-13'));
+    });
+
+    test('ignora una huella mal formada', () {
+      final info = parseLatestRelease({
+        'tag_name': 'app-13',
+        'html_url': 'https://github.com/B3njaminGC/SuperCheck/releases/tag/app-13',
+        'assets': [
+          {
+            'name': 'SuperCheck.apk',
+            'size': 10,
+            'digest': 'md5:zzz',
+            'browser_download_url':
+                'https://github.com/B3njaminGC/SuperCheck/releases/download/app-13/SuperCheck.apk',
+          },
+        ],
+      })!;
+      expect(info.sha256, isNull);
+    });
+
     test('sin APK usa la página de la release', () {
       final info = parseLatestRelease({
         'tag_name': 'app-5',
