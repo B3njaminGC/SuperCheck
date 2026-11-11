@@ -216,6 +216,20 @@ void main() {
       expect(decoded.items.single.desiredQty, 2);
     });
 
+    test('las fotos de las bases hermanas también se aceptan', () {
+      const items = [
+        SharedItem(
+          name: 'Shampoo',
+          barcode: '7791293000001',
+          imageUrl: 'https://images.openbeautyfacts.org/images/products/779/129/300/0001/front_es.4.200.jpg',
+        ),
+      ];
+      final decoded = ListShareCodec.decode(
+        ListShareCodec.encode(const SharedList(name: 'L', items: items)),
+      )!;
+      expect(decoded.items.single.imageUrl, contains('openbeautyfacts.org'));
+    });
+
     test('un SC2 cortado, dañado o que se expande demasiado da null', () {
       final code = ListShareCodec.encode(SharedList(name: 'Mes', items: fifteen()));
       expect(ListShareCodec.decode(code.substring(0, code.length ~/ 2)), isNull);

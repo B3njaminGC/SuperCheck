@@ -349,4 +349,106 @@ void main() {
       expect(await repo.getByBarcode('abc'), isNull);
     });
   });
+
+  group('bases hermanas (limpieza y perfumería)', () {
+    const extras = ['world.openproductsfacts.org', 'world.openbeautyfacts.org'];
+
+    ProductRepository withExtras(MockClientHandler handler) => ProductRepository(
+          client: MockClient(handler),
+          countryTag: null,
+          useSearchALicious: false,
+          extraHosts: extras,
+        );
+
+    test('un código que Open Food Facts no conoce se busca en las otras bases', () async {
+      final hosts = <String>[];
+      final repo = withExtras((request) async {
+        hosts.add(request.url.host);
+        if (request.url.host == 'world.openbeautyfacts.org') {
+          return _json({
+            'status': 1,
+            'product': {
+              'code': '7791293000001',
+              'product_name': 'Shampoo reparador',
+              'brands': 'Sedal',
+              'quantity': '340 ml',
+            },
+          });
+        }
+        return _json({'status': 0}, 404);
+      });
+
+      final product = await repo.getByBarcode('7791293000001');
+      expect(product!.name, 'Shampoo reparador');
+      expect(product.brand, 'Sedal');
+      expect(hosts, [
+        'world.openfoodfacts.org',
+        'world.openproductsfacts.org',
+        'world.openbeautyfacts.org',
+      ]);
+    });
+
+    test('si no está en ninguna da null, aunque una base hermana esté caída', () async {
+      final repo = withExtras((request) async {
+        if (request.url.host == 'world.openproductsfacts.org') {
+          return _json({'status': 0}, 503);
+        }
+        return _json({'status': 0}, 404);
+      });
+      expect(await repo.getByBarcode('7791293000001'), isNull);
+    });
+
+    test('si Open Food Facts sí lo conoce, no consulta las otras', () async {
+      final hosts = <String>[];
+      final repo = withExtras((request) async {
+        hosts.add(request.url.host);
+        return _json({
+          'status': 1,
+          'product': {'code': '7790001000011', 'product_name': 'Leche entera'},
+        });
+      });
+      expect((await repo.getByBarcode('7790001000011'))!.name, 'Leche entera');
+      expect(hosts, ['world.openfoodfacts.org']);
+    });
+
+    test('con pocos resultados en la búsqueda se suman los de las otras bases', () async {
+      final repo = withExtras((request) async {
+        switch (request.url.host) {
+          case 'world.openfoodfacts.org':
+            return _json({
+              'products': [
+                {'code': '1000000000001', 'product_name': 'Detergente en polvo'},
+              ],
+            });
+          case 'world.openproductsfacts.org':
+            return _json({'products': <Object>[]}, 503); // caída: no rompe nada
+          default:
+            return _json({
+              'products': [
+                {'code': '1000000000001', 'product_name': 'Repetido'},
+                {'code': '1000000000002', 'product_name': 'Jabón líquido'},
+              ],
+            });
+        }
+      });
+
+      final results = await repo.searchByName('detergente');
+      expect(results.map((p) => p.name), ['Detergente en polvo', 'Jabón líquido']);
+    });
+
+    test('con suficientes resultados no consulta las otras bases', () async {
+      final hosts = <String>{};
+      final repo = withExtras((request) async {
+        hosts.add(request.url.host);
+        return _json({
+          'products': [
+            for (var i = 0; i < 8; i++)
+              {'code': '200000000000$i', 'product_name': 'Galletita $i'},
+          ],
+        });
+      });
+      expect(await repo.searchByName('galletita'), hasLength(8));
+      expect(hosts, {'world.openfoodfacts.org'});
+    });
+  });
 }

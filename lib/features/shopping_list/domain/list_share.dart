@@ -18,7 +18,7 @@ class SharedItem {
   final String? quantityLabel;
   final String? barcode;
 
-  /// Solo fotos de Open Food Facts: las fotos propias están en el teléfono de quien envía.
+  /// Solo fotos de Open Food Facts y sus bases hermanas: las fotos propias están en el teléfono de quien envía.
   final String? imageUrl;
   final int desiredQty;
 }
@@ -297,12 +297,18 @@ abstract final class ListShareCodec {
 
   /// Solo fotos de Open Food Facts: una dirección cualquiera haría que el teléfono de
   /// quien importa visite un sitio elegido por otra persona.
+  static const _imageDomains = [
+    'openfoodfacts.org',
+    'openbeautyfacts.org',
+    'openproductsfacts.org',
+  ];
+
   static String? _imageUrl(Object? v) {
     if (v is! String || v.length > 300) return null;
     final uri = Uri.tryParse(v);
     if (uri == null || uri.scheme != 'https') return null;
     final host = uri.host;
-    final ok = host == 'openfoodfacts.org' || host.endsWith('.openfoodfacts.org');
+    final ok = _imageDomains.any((d) => host == d || host.endsWith('.$d'));
     return ok ? v : null;
   }
 }

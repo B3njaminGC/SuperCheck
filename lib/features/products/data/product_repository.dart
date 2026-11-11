@@ -24,10 +24,12 @@ class ProductRepository {
     String? countryTag = AppConstants.offDefaultCountryTag,
     bool fallbackToWorld = true,
     bool useSearchALicious = true,
+    List<String> extraHosts = const [],
     String searchHost = AppConstants.offSearchHost,
     Duration timeout = AppConstants.httpTimeout,
   })  : _client = client,
         _useSearchALicious = useSearchALicious,
+        _extraHosts = extraHosts,
         _searchHost = searchHost,
         _host = host,
         _countryTag = countryTag,
@@ -39,6 +41,9 @@ class ProductRepository {
   final String? _countryTag;
   final bool _fallbackToWorld;
   final bool _useSearchALicious;
+
+  /// Otras bases con el mismo formato que se consultan si Open Food Facts no alcanza.
+  final List<String> _extraHosts;
   final String _searchHost;
   final Duration _timeout;
 
@@ -60,6 +65,39 @@ class ProductRepository {
     if (typed.length < 2) return const [];
     final term = _withoutFillerWords(typed);
 
+    final primary = await _searchPrimary(term, page: page, pageSize: pageSize);
+    // Con pocos resultados (típico de limpieza o perfumería) se suman las bases hermanas.
+    if (page > 1 || primary.length >= _enoughResults || _extraHosts.isEmpty) {
+      return primary;
+    }
+    final extras = await Future.wait([
+      for (final host in _extraHosts) _searchExtra(host, term, pageSize),
+    ]);
+    final seen = {for (final p in primary) p.barcode};
+    return [
+      ...primary,
+      for (final list in extras)
+        for (final p in list)
+          if (seen.add(p.barcode)) p,
+    ];
+  }
+
+  static const _enoughResults = 6;
+
+  /// Mejor esfuerzo: si una base hermana falla, simplemente no suma resultados.
+  Future<List<Product>> _searchExtra(String host, String term, int pageSize) async {
+    try {
+      return await _searchLegacy(term, page: 1, pageSize: pageSize, host: host);
+    } on AppException {
+      return const [];
+    }
+  }
+
+  Future<List<Product>> _searchPrimary(
+    String term, {
+    required int page,
+    required int pageSize,
+  }) async {
     if (_useSearchALicious) {
       try {
         final results = await _searchModern(term, page: page, pageSize: pageSize);
@@ -97,6 +135,7 @@ class ProductRepository {
     String term, {
     required int page,
     required int pageSize,
+    String? host,
   }) async {
     final country = _countryTag;
     if (country != null) {
@@ -105,18 +144,34 @@ class ProductRepository {
         page: page,
         pageSize: pageSize,
         countryTag: country,
+        host: host,
       );
       if (local.isNotEmpty || !_fallbackToWorld || page > 1) return local;
     }
-    return _search(term, page: page, pageSize: pageSize);
+    return _search(term, page: page, pageSize: pageSize, host: host);
   }
 
-  /// Devuelve el producto con ese código de barras, o `null` si OFF no lo conoce.
+  /// Devuelve el producto con ese código de barras, o `null` si no lo conoce ni Open Food
+  /// Facts ni sus bases hermanas (limpieza, perfumería).
   Future<Product?> getByBarcode(String barcode) async {
     final code = barcode.replaceAll(RegExp(r'\D'), '');
     if (code.isEmpty) return null;
 
-    final uri = Uri.https(_host, '/api/v2/product/$code.json', {
+    final found = await _lookup(_host, code);
+    if (found != null) return found;
+    for (final host in _extraHosts) {
+      try {
+        final other = await _lookup(host, code);
+        if (other != null) return other;
+      } on AppException {
+        // Mejor esfuerzo: una base hermana caída no debe tapar el "no lo conozco".
+      }
+    }
+    return null;
+  }
+
+  Future<Product?> _lookup(String host, String code) async {
+    final uri = Uri.https(host, '/api/v2/product/$code.json', {
       'fields': AppConstants.offFields,
     });
     final response = await _get(uri);
@@ -238,8 +293,9 @@ class ProductRepository {
     required int page,
     required int pageSize,
     String? countryTag,
+    String? host,
   }) {
-    return Uri.https(_host, '/cgi/search.pl', {
+    return Uri.https(host ?? _host, '/cgi/search.pl', {
       'search_terms': term,
       'search_simple': '1',
       'action': 'process',
@@ -261,12 +317,14 @@ class ProductRepository {
     required int page,
     required int pageSize,
     String? countryTag,
+    String? host,
   }) async {
     final uri = _searchUri(
       term,
       page: page,
       pageSize: pageSize,
       countryTag: countryTag,
+      host: host,
     );
     final response = await _get(uri);
     _ensureSuccess(response);

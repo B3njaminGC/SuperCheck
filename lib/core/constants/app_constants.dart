@@ -8,6 +8,14 @@ abstract final class AppConstants {
   /// más tráfico que `/cgi/search.pl`, que limita a 10 búsquedas por minuto por IP.
   static const offSearchHost = 'search.openfoodfacts.org';
 
+  /// Bases hermanas de Open Food Facts (mismo proyecto y mismo formato) con lo que no es
+  /// comida: limpieza y hogar (Open Products Facts) e higiene y perfumería (Open Beauty
+  /// Facts). Se consultan cuando Open Food Facts no conoce el producto.
+  static const otherFactsHosts = [
+    'world.openproductsfacts.org',
+    'world.openbeautyfacts.org',
+  ];
+
   /// Open Food Facts pide identificar a la app en el User-Agent.
   static const offUserAgent =
       'SuperCheck/0.1.0 (https://github.com/B3njaminGC/SuperCheck)';

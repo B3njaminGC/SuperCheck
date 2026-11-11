@@ -1,11 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../core/network/http_client_provider.dart';
 import '../data/product_repository.dart';
 import '../domain/product.dart';
 
 final productRepositoryProvider = Provider<ProductRepository>((ref) {
-  return ProductRepository(client: ref.watch(httpClientProvider));
+  return ProductRepository(
+    client: ref.watch(httpClientProvider),
+    extraHosts: AppConstants.otherFactsHosts,
+  );
 });
 
 /// Resultados de búsqueda por nombre. La pantalla solo cambia el `query` cuando la
