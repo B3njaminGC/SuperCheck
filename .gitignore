@@ -1,21 +1,43 @@
-# Flutter / Dart
+# ── Flutter / Dart ──────────────────────────────────────────────
 .dart_tool/
 .packages
 .flutter-plugins
 .flutter-plugins-dependencies
 build/
-pubspec.lock
 coverage/
+pubspec.lock
 
-# IDEs
+# Las carpetas android/ e ios/ no se versionan: las genera `flutter create`
+# (a mano o en el flujo de GitHub Actions) y se parchean con tools/.
+/android/
+/ios/
+
+# ── Datos personales y secretos: nunca al repositorio ───────────
+# Variables de entorno locales (usá --dart-define-from-file con uno de estos)
+env.json
+*.env
+# Llaves de firma de Android: van como secretos de GitHub
+*.keystore
+*.jks
+key.properties
+# Claves y certificados
+*.pem
+*.p12
+
+# ── Python (pruebas y scripts de tools/) ────────────────────────
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+
+# ── Salidas locales ─────────────────────────────────────────────
+analyze.txt
+test.txt
+*.apk
+
+# ── Editores y sistema operativo ────────────────────────────────
 .idea/
 .vscode/
 *.iml
-
-# Secretos locales (usá --dart-define-from-file con uno de estos)
-env.json
-*.env
-
-# Llaves de firma: nunca al repositorio (van como secretos de GitHub)
-*.keystore
-*.jks
+.DS_Store
+Thumbs.db
