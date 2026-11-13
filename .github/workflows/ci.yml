@@ -47,3 +47,18 @@ jobs:
             echo "::error title=flutter test falló::$msg"
           fi
           exit "$code"
+
+  # Pruebas de los scripts de tools/ y de las reglas del flujo de publicación (Python).
+  herramientas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Pruebas de las herramientas
+        run: |
+          pip install pytest
+          python -m pytest tests -q
