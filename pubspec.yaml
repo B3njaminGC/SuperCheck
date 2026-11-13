@@ -1,5 +1,5 @@
 name: supercheck
-description: SuperCheck - lista de supermercado inteligente, compartida y con verificador de códigos de barras.
+description: SuperCheck - lista de compras con fotos y escáner de códigos de barras para verificar productos en el supermercado.
 publish_to: "none"
 version: 0.1.0+1
 
